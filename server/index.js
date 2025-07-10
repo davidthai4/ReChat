@@ -3,6 +3,7 @@ import mongoose from "mongoose";      // MongoDB database connection library
 import cookieParser from "cookie-parser"; // Parse cookies from requests
 import dotenv from "dotenv";          // Load environment variables from .env file
 import cors from "cors";              // Allow cross-origin requests
+import authRoutes from "./routes/AuthRoutes.js"; // Import authentication routes
 
 // Load environment variables
 dotenv.config();
@@ -25,6 +26,7 @@ app.use(
 app.use(express.json());      // Parse JSON from request body
 app.use(cookieParser());      // Parse cookies from requests
 
+app.use("/api/auth", authRoutes); // Mount authentication routes
 // Start server
 const server = app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);

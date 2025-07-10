@@ -1,12 +1,12 @@
 import User from "../models/UserModel.js";  // User model for database operations
-import {sign} from "jsonwebtoken";          // JWT token creation function
+import jwt from "jsonwebtoken";          // JWT token creation function
 
 // Token expiration time: 3 days in milliseconds
 const maxAge = 3 * 24 * 60 * 60 * 1000;
 
 // Create JWT token for user authentication
 const createToken = (email, userID) => {
-    return sign({ email, userID }, process.env.JWT_KEY, {
+    return jwt.sign({ email, userID }, process.env.JWT_KEY, {
         expiresIn: maxAge,
     });
 };
@@ -19,11 +19,11 @@ export const signup = async (request, response, next) => {
         
         // Validate required fields
         if(!email || !password) {
-            return response.status(400).json({ message: "Email and Password are required." });
+            return response.status(400).send("Email and Password are required.");
         }
         
         // Create new user in database (password will be auto-hashed by pre-save hook)
-        const newUser = await User.create({email, password});
+        const newUser = await User.create({ email, password });
         
         // Set JWT token as secure cookie
         response.cookie("jwt", createToken(newUser.email, newUser.id), {
@@ -45,6 +45,6 @@ export const signup = async (request, response, next) => {
         // Log error for debugging
         console.log({ error });
         // Send generic error response
-        response.status(500).json({ message: "Internal server error" });
+        response.status(500).send("Internal server error");
     }
 };
