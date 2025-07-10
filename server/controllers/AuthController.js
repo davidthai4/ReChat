@@ -48,3 +48,51 @@ export const signup = async (request, response, next) => {
         response.status(500).send("Internal server error");
     }
 };
+
+export const login = async (request, response, next) => {
+    try {
+        // Extract email and password from request body
+        const {email, password} = request.body;
+        
+        // Validate required fields
+        if(!email || !password) {
+            return response.status(400).send("Email and Password are required.");
+        }
+        
+        // Find user by email
+        const user = await User.findOne({ email });
+        if(!user) {
+            return response.status(404).send("User with this email was not found.");
+        }
+        // Compare provided password with stored hashed password
+        const auth = await user.comparePassword(password);
+        if (!auth) {
+            return response.status(401).send("Password is incorrect.");
+        }
+        // Set JWT token as secure cookie
+        response.cookie("jwt", createToken(user.email, user.id), {
+            maxAge,              // Cookie expires in 3 days
+            secure: true,        // Only send over HTTPS
+            sameSite: "None",    // Allow cross-site requests
+        });
+        
+        // Send success response with user data - excluding password but now including profile details
+        return response.status(200).json({
+            user:{
+                id: user.id,
+                email: user.email,
+                profileSetup: user.profileSetup,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                image: user.image,
+                color: user.color,
+            }
+        });
+        
+    } catch (error) {
+        // Log error for debugging
+        console.log({ error });
+        // Send generic error response
+        response.status(500).send("Internal server error");
+    }
+};
