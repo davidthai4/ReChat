@@ -7,9 +7,11 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
 import { SIGNUP_ROUTE, LOGIN_ROUTE } from '@/utils/constants';
+import { useNavigate } from "react-router-dom";
 
 const Auth = () => {
 
+    const navigate = useNavigate();
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
@@ -49,6 +51,10 @@ const Auth = () => {
           { email, password },
           { withCredentials: true }
         );
+        if (response.data.user.id) {
+          if(response.data.user.profileSetup) navigate("/chat")
+          else navigate("/profile");
+        }
         console.log({ response });
       }
     };
@@ -60,6 +66,9 @@ const Auth = () => {
           { email, password },
           { withCredentials: true }
         );
+        if (response.status === 201) {
+          navigate("/profile-setup");
+        }
         console.log({ response });
       }
     };
