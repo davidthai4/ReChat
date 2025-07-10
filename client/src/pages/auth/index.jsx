@@ -6,13 +6,25 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
-import { SIGNUP_ROUTE } from '@/utils/constants';
+import { SIGNUP_ROUTE, LOGIN_ROUTE } from '@/utils/constants';
 
 const Auth = () => {
 
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
+
+    const validateLogin = () => {
+      if (!email.length) {
+        toast.error("Email is required.");
+        return false;
+      }
+      if (!password.length) {
+        toast.error("Password is required.");
+        return false;
+      }
+      return true;
+    };      
 
     const validateSignup = () => {
       if (!email.length) {
@@ -30,7 +42,16 @@ const Auth = () => {
       return true;
     };
 
-    const handleLogin = async () => {};
+    const handleLogin = async () => {
+      if (validateLogin()) {
+        const response = await apiClient.post(
+          LOGIN_ROUTE, 
+          { email, password },
+          { withCredentials: true }
+        );
+        console.log({ response });
+      }
+    };
 
     const handleSignup = async () => {
       if (validateSignup()) {
