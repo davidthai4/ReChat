@@ -124,3 +124,35 @@ export const getUserInfo = async (request, response, next) => {
         response.status(500).send("Internal server error");
     }
 }; 
+
+export const updateProfile = async (request, response, next) => {
+    try {
+        const {userID} = request;
+        const { firstName, lastName, color } = request.body;
+        if (!firstName || !lastName || !color) {
+            return response.status(404).send("First name, last name, and color are required.");
+        }   
+        
+        const userData = await User.findByIdAndUpdate(
+            userID,
+            { firstName, lastName, color, profileSetup: true },
+            { new: true, runValidators: true } // Return the updated document
+        );
+        return response.status(200).json({
+            id: userData.id,
+            email: userData.email,
+            profileSetup: userData.profileSetup,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            image: userData.image,
+            color: userData.color,
+    
+        });
+        
+    } catch (error) {
+        // Log error for debugging
+        console.log({ error });
+        // Send generic error response
+        response.status(500).send("Internal server error");
+    }
+}; 
