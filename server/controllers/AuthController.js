@@ -1,6 +1,7 @@
 import User from "../models/UserModel.js";  // User model for database operations
 import jwt from "jsonwebtoken";          // JWT token creation function
 import { compare } from "bcrypt";         // Password hashing comparison function
+import { renameSync, unlinkSync } from "fs";         // File system utility to rename files
 
 // Token expiration time: 3 days in milliseconds
 const maxAge = 3 * 24 * 60 * 60 * 1000;
@@ -128,6 +129,66 @@ export const getUserInfo = async (request, response, next) => {
 export const updateProfile = async (request, response, next) => {
     try {
         const {userID} = request;
+        const { firstName, lastName, color } = request.body;
+        if (!firstName || !lastName) {
+            return response.status(400).send("First name, last name, and color are required.");
+        }   
+        
+        const userData = await User.findByIdAndUpdate(
+            userID,
+            { firstName, lastName, color, profileSetup: true },
+            { new: true, runValidators: true } // Return the updated document
+        );
+        return response.status(200).json({
+            id: userData.id,
+            email: userData.email,
+            profileSetup: userData.profileSetup,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            image: userData.image,
+            color: userData.color,
+    
+        });
+        
+    } catch (error) {
+        // Log error for debugging
+        console.log({ error });
+        // Send generic error response
+        response.status(500).send("Internal server error");
+    }
+}; 
+
+export const addProfileImage = async (request, response, next) => {
+    try {
+        if (!request.file) {
+            return response.status(400).send("Profile image is required.");
+        }
+        
+        const date = Date.now();
+        let fileName = "uploads/profiles" + date + request.file.originalname;
+        renameSync(request.file.path, fileName);
+
+        const updatedUser = await User.findByIdAndUpdate(request.userID, 
+            {image: fileName}, 
+            {new: true, runValidators: true}
+        );
+
+        return response.status(200).json({
+            image: updatedUser.image,
+
+        });
+        
+    } catch (error) {
+        // Log error for debugging
+        console.log({ error });
+        // Send generic error response
+        response.status(500).send("Internal server error");
+    }
+}; 
+
+export const removeProfileImage = async (request, response, next) => {
+    try {
+        const { userID } = request;
         const { firstName, lastName, color } = request.body;
         if (!firstName || !lastName) {
             return response.status(400).send("First name, last name, and color are required.");
