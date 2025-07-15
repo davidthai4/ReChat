@@ -165,7 +165,7 @@ export const addProfileImage = async (request, response, next) => {
         }
         
         const date = Date.now();
-        let fileName = "uploads/profiles" + date + request.file.originalname;
+        let fileName = "uploads/profiles/" + date + request.file.originalname;
         renameSync(request.file.path, fileName);
 
         const updatedUser = await User.findByIdAndUpdate(request.userID, 
@@ -187,28 +187,28 @@ export const addProfileImage = async (request, response, next) => {
 }; 
 
 export const removeProfileImage = async (request, response, next) => {
-    try {
-        const { userID } = request;
-        const { firstName, lastName, color } = request.body;
-        if (!firstName || !lastName) {
-            return response.status(400).send("First name, last name, and color are required.");
-        }   
-        
-        const userData = await User.findByIdAndUpdate(
-            userID,
-            { firstName, lastName, color, profileSetup: true },
-            { new: true, runValidators: true } // Return the updated document
-        );
-        return response.status(200).json({
-            id: userData.id,
-            email: userData.email,
-            profileSetup: userData.profileSetup,
-            firstName: userData.firstName,
-            lastName: userData.lastName,
-            image: userData.image,
-            color: userData.color,
-    
-        });
+try {
+    const { userID } = request;
+    const user = await User.findById(userID);
+
+    if (!user) {
+        return response.status(404).send("User not found.");
+    }
+
+    if (user.image) {
+      try {
+        unlinkSync(user.image);
+      } catch (err) {
+        console.log("Failed to delete image file:", err.message);
+        // Optionally: continue anyway, since the DB will be updated
+      }
+    }
+
+    user.image = null;
+    await user.save();
+
+    return response.status(200).send("Profile image removed successfully.");
+
         
     } catch (error) {
         // Log error for debugging
