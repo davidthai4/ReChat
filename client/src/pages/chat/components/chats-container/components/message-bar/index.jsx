@@ -33,7 +33,7 @@ const MessageBar = () => {
                 <button className="text-neutral-500 focus:border-none focus:outline-none focus:text-white duration-300 transition-all">
                     <GrAttachment className="text-2xl" />
                 </button>
-                <div className="realtive">
+                <div className="relative">
                     <button className="text-neutral-500 focus:border-none focus:outline-none focus:text-white duration-300 transition-all" onClick={() => setEmojiPickerOpen(true)}>
                         <RiEmojiStickerLine className="text-2xl" />
                     </button>
