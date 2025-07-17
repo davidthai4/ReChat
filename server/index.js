@@ -5,6 +5,7 @@ import dotenv from "dotenv";          // Load environment variables from .env fi
 import cors from "cors";              // Allow cross-origin requests
 import authRoutes from "./routes/AuthRoutes.js"; // Import authentication routes
 import contactRoutes from "./routes/ContactRoutes.js"; // Import contact routes
+import setupSocket from "./socket.js";
 
 // Load environment variables
 dotenv.config();
@@ -36,6 +37,7 @@ const server = app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);
 });
 
+setupSocket(server);
 // Connect to MongoDB
 mongoose
 .connect(databaseURL)
