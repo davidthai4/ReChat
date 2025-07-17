@@ -1,17 +1,25 @@
 import jwt from "jsonwebtoken";
 
 export const verifyToken = (req, res, next) => {
-    console.log(req.cookies)
-    const token = req.cookies.jwt; // Get JWT from cookies
+    console.log("=== AUTH MIDDLEWARE START ===");
+    console.log("Cookies:", req.cookies);
+    console.log("JWT Key exists:", !!process.env.JWT_KEY);
+    
+    const token = req.cookies.jwt;
     if (!token) {
-        return res.status(401).send("Unauthorized"); // No token provided
+        console.log("No JWT token found");
+        return res.status(401).send("Unauthorized");
     } 
-    jwt.verify(token, process.env.JWT_KEY, async(err,payload) => {
-        if (err) {
-            return res.status(401).send("Token is not valid"); // Invalid token
-        }
-        // Attach user ID to request object for further processing
+    
+    try {
+        const payload = jwt.verify(token, process.env.JWT_KEY);
+        console.log("JWT payload:", payload);
         req.userID = payload.userID;
-        next(); // Proceed to the next middleware or route handler
-    });  
+        console.log("User authenticated:", req.userID);
+        console.log("=== AUTH MIDDLEWARE END ===");
+        next();
+    } catch (err) {
+        console.log("JWT verification failed:", err);
+        return res.status(401).send("Token is not valid");
+    }
 };

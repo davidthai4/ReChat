@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser"; // Parse cookies from requests
 import dotenv from "dotenv";          // Load environment variables from .env file
 import cors from "cors";              // Allow cross-origin requests
 import authRoutes from "./routes/AuthRoutes.js"; // Import authentication routes
+import contactRoutes from "./routes/ContactRoutes.js"; // Import contact routes
 
 // Load environment variables
 dotenv.config();
@@ -29,6 +30,7 @@ app.use(express.json());      // Parse JSON from request body
 app.use(cookieParser());      // Parse cookies from requests
 
 app.use("/api/auth", authRoutes); // Mount authentication routes
+app.use("/api/contacts", contactRoutes); // Mount contact routes
 // Start server
 const server = app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);

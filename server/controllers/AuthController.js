@@ -217,3 +217,18 @@ try {
         response.status(500).send("Internal server error");
     }
 }; 
+
+export const logout = async (request, response, next) => {
+    try {
+        
+        response.cookie("jwt", "", {maxAge: 1, secure: true, sameSite: "None"});
+    
+        return response.status(200).send("Logged out successfully.")
+            
+        } catch (error) {
+            // Log error for debugging
+            console.log({ error });
+            // Send generic error response
+            response.status(500).send("Internal server error");
+        }
+    };
