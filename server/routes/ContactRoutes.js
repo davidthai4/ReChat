@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { verifyToken } from "../middleware/AuthMiddleware.js";
 import { searchContacts } from "../controllers/ContactsController.js";
-import User from "../models/User.js"; // Added import for User model
+import User from "../models/UserModel.js"; // Added import for User model
 
 const contactsRoutes = Router();
 
@@ -12,7 +12,7 @@ contactsRoutes.get("/test-users", verifyToken, async (req, res) => {
         res.json({ 
             totalUsers: allUsers.length,
             users: allUsers.map(u => ({
-                id: u._id,
+                id: u.id,
                 email: u.email,
                 firstName: u.firstName,
                 lastName: u.lastName,

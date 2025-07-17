@@ -12,11 +12,10 @@ import {
 import { Input } from "@/components/ui/input";
 import Lottie from "react-lottie";
 import { animationDefaultOptions } from "@/lib/utils";
-import { SEARCH_CONTACTS_ROUTE } from "@/utils/constants";
+import { HOST, SEARCH_CONTACTS_ROUTE } from "@/utils/constants";
 import { apiClient } from "@/lib/api-client";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { getColor } from "@/lib/utils";
-import { HOST } from "@/utils/constants";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppStore } from "@/store";
 
@@ -50,7 +49,7 @@ const NewDM = () => {
         console.log("Starting conversation with:", contact);
         setOpenNewContactModel(false);
         setSelectedChatType("contact");
-        setSelectedChatData(contact);
+        setSelectedChatData({ ...contact, id: contact._id });
         setSearchContacts([]);
     };
 
@@ -80,14 +79,14 @@ const NewDM = () => {
                         <ScrollArea className="h-[250px]">
                             <div className="flex flex-col gap-2">
                                 {searchedContacts.map((contact) => (
-                                    <div key={contact._id} className="flex gap-3 items-center cursor-pointer hover:bg-[#2c2e3b] p-2 rounded" onClick={() => selectNewContact(contact)}>
+                                    <div key={contact.id} className="flex gap-3 items-center cursor-pointer hover:bg-[#2c2e3b] p-2 rounded" onClick={() => selectNewContact(contact)}>
                                         <div className="w-12 h-12 relative">
                                             <Avatar className="h-12 w-12 rounded-full overflow-hidden">
                                                 {contact.image ? (
                                                     <AvatarImage
                                                         src={`${HOST}/${contact.image}`}
                                                         alt="profile"
-                                                        className="object-cover w-full h-full bg-black"
+                                                        className="object-cover w-full h-full bg-black rounded-full"
                                                     />
                                                 ) : (
                                                     <div
