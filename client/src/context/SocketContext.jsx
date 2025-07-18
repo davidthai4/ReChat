@@ -12,7 +12,7 @@ export const useSocket = () => {
 
 export const SocketProvider = ({ children }) => {
     const socket = useRef(null);
-    const { userInfo } = useAppStore();
+    const { userInfo, addMessage } = useAppStore();
 
     useEffect(() => {
         if (userInfo) {
@@ -25,16 +25,37 @@ export const SocketProvider = ({ children }) => {
             });
 
             const handleReceiveMessage = (message) => {
-                console.log("Received message:", message);
+                // console.log("=== RECEIVED MESSAGE DEBUG ===");
+                // console.log("Full message:", message);
+                // console.log("Message sender:", message.sender);
+                // console.log("Message recipient:", message.recipient);
+                
                 const { selectedChatType, selectedChatData } = useAppStore.getState();
-
-                if (selectedChatType !== undefined && (selectedChatData.id === message.sender.id || selectedChatData.id === message.recipient.id)
-                ) {
-                console.log("message received:", message);
-                addMessage(message);
-
-            }
-        };
+                // console.log("Selected chat type:", selectedChatType);
+                // console.log("Selected chat data:", selectedChatData);
+                
+                // Extract the actual ID strings
+                const senderId = message.sender._id || message.sender.id || message.sender;
+                const recipientId = message.recipient._id || message.recipient.id || message.recipient;
+                const currentChatId = selectedChatData?.id || selectedChatData?._id;
+                
+                // console.log("Sender ID:", senderId);
+                // console.log("Recipient ID:", recipientId);
+                // console.log("Current chat ID:", currentChatId);
+                
+                const isForCurrentChat = selectedChatType !== undefined && 
+                    (currentChatId === senderId || currentChatId === recipientId);
+                
+                // console.log("Is for current chat:", isForCurrentChat);
+                
+                if (isForCurrentChat) {
+                    // console.log("Adding received message to chat:", message);
+                    addMessage(message);
+                } else {
+                    // console.log("Message not for current chat, ignoring");
+                }
+                // console.log("=== END DEBUG ===");
+            };
 
             socket.current.on("receiveMessage", handleReceiveMessage);
 
@@ -42,7 +63,7 @@ export const SocketProvider = ({ children }) => {
                 socket.current.disconnect();
             };
         }
-    }, [userInfo])
+    }, [userInfo, addMessage]);
     
     return (
         <SocketContext.Provider value={socket.current}>

@@ -13,7 +13,7 @@ const setupSocket = (server) => {
     const userSocketMap = new Map();
 
     const disconnect = (socket) => {
-        console.log(`Client ${socket.id} disconnected`);
+        // console.log(`Client ${socket.id} disconnected`);
         for (const [userID, socketID] of userSocketMap.entries()) {
             if (socketID === socket.id) {
                 userSocketMap.delete(userID);
@@ -23,13 +23,12 @@ const setupSocket = (server) => {
     };
 
     const sendMessage = async (message, socket) => {
-        console.log("sendMessage called with:", message);
-        console.log("userSocketMap keys:", Array.from(userSocketMap.keys()));
-        console.log("Looking for recipient:", message.recipient);
+        // console.log("sendMessage called with:", message);
+        // console.log("userSocketMap keys:", Array.from(userSocketMap.keys()));
+        // console.log("Looking for recipient:", message.recipient);
         const senderSocketID = userSocketMap.get(message.sender);
         const recipientSocketID = userSocketMap.get(message.recipient);
-        console.log("Recipient socket ID:", recipientSocketID);
-
+        // console.log("Recipient socket ID:", recipientSocketID);
 
         const createdMessage = await Message.create(message);
 
@@ -50,12 +49,12 @@ const setupSocket = (server) => {
         const userID = socket.handshake.query.userID;
         if (userID) {
             userSocketMap.set(userID, socket.id);
-            console.log(`User connected: ${userID} with socket ID: ${socket.id}`);
+            // console.log(`User connected: ${userID} with socket ID: ${socket.id}`);
         } else {
-            console.log("User ID not provided during connection.");
+            // console.log("User ID not provided during connection.");
         }        
         socket.on("sendMessage", (data) => {
-            console.log("sendMessage event received:", data);
+            // console.log("sendMessage event received:", data);
             sendMessage(data, socket);
         });
         socket.on("disconnect", () => disconnect(socket));

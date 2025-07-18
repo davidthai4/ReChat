@@ -6,22 +6,35 @@ export const createChatSlice = (set, get) => ({
     setSelectedChatData: (selectedChatData) => set({ selectedChatData }),
     setSelectedChatMessages: (selectedChatMessages) => set({ selectedChatMessages }),
     closeChat: () =>
-        set({ selectedChatType: undefined, selectedChatData: undefined, selectedChatMessages: [], }),
+        set({ selectedChatType: undefined, selectedChatData: undefined, selectedChatMessages: [] }),
     addMessage: (message) => {
-        const { selectedChatMessages } = get().selectedChatMessages;
-        const selectedChatType = get().selectedChatType;
+        // console.log("=== ADD MESSAGE DEBUG ===");
+        // console.log("Adding message:", message);
+        
+        const { selectedChatMessages } = get();
+        const { selectedChatType } = get();
+        
+        // console.log("Current messages count:", selectedChatMessages.length);
+        // console.log("Selected chat type:", selectedChatType);
+
+        // Handle both sent messages (with IDs) and received messages (with full objects)
+        const processedMessage = {
+            ...message,
+            sender: selectedChatType === "channel" 
+                ? message.sender 
+                : (message.sender._id || message.sender.id || message.sender),
+            recipient: selectedChatType === "channel" 
+                ? message.recipient 
+                : (message.recipient._id || message.recipient.id || message.recipient),
+        };
+
+        // console.log("Processed message:", processedMessage);
 
         set({
-            selectedChatMessages: [...selectedChatMessages, {...message,
-                recipient: 
-                selectedChatType === "channel" 
-                ? message.recipient 
-                : message.recipient.id,
-                sender: 
-                selectedChatType === "channel" 
-                ? message.sender 
-                : message.sender.id,
-            }],
-        })
+            selectedChatMessages: [...selectedChatMessages, processedMessage],
+        });
+        
+        // console.log("Message added to state");
+        // console.log("=== END ADD MESSAGE DEBUG ===");
     },
 });
