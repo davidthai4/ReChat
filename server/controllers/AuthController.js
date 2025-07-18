@@ -37,7 +37,7 @@ export const signup = async (request, response, next) => {
         // Send success response with user data (excluding password)
         return response.status(201).json({
             user:{
-                id: newUser._id,
+                _id: newUser._id,
                 email: newUser.email,
                 profileSetup: newUser.profileSetup,
             }
@@ -81,7 +81,7 @@ export const login = async (request, response, next) => {
         // Send success response with user data - excluding password but now including profile details
         return response.status(200).json({
             user:{
-                id: user._id,
+                _id: user._id,
                 email: user.email,
                 profileSetup: user.profileSetup,
                 firstName: user.firstName,
@@ -108,7 +108,7 @@ export const getUserInfo = async (request, response, next) => {
         }        
         return response.status(200).json({
     
-            id: userData._id,
+            _id: userData._id,
             email: userData.email,
             profileSetup: userData.profileSetup,
             firstName: userData.firstName,
@@ -140,7 +140,7 @@ export const updateProfile = async (request, response, next) => {
             { new: true, runValidators: true } // Return the updated document
         );
         return response.status(200).json({
-            id: userData._id,
+            _id: userData._id,
             email: userData.email,
             profileSetup: userData.profileSetup,
             firstName: userData.firstName,

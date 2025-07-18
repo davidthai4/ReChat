@@ -36,14 +36,15 @@ const MessageBar = () => {
         }
         if (selectedChatType === "contact" && message.trim()) {
             const msgData = {
-                sender: userInfo._id,
+                sender: userInfo.id,
                 recipient: selectedChatData._id,
                 messageType: "text",
                 content: message,
                 fileUrl: undefined,
                 timestamp: new Date(),
             };
-            
+            console.log("userInfo:", userInfo);
+            console.log("selectedChatData:", selectedChatData);
             // console.log("Emitting sendMessage", msgData);
             socket.emit("sendMessage", msgData);
             setMessage("");

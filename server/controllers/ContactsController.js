@@ -1,4 +1,6 @@
+import Message from "../models/MessagesModel.js";
 import User from "../models/UserModel.js";
+import mongoose from "mongoose";
 
 export const searchContacts = async (request, response, next) => {
     try {
@@ -34,7 +36,7 @@ export const searchContacts = async (request, response, next) => {
 
         const contacts = await User.find({
             $and: [
-                { id: { $ne: request.userID } },
+                { _id: { $ne: request.userID } },
                 {
                     $or: [
                         { firstName: regex },
@@ -55,6 +57,64 @@ export const searchContacts = async (request, response, next) => {
         console.log("Error message:", error.message);
         console.log("Error stack:", error.stack);
         console.log("=== END ERROR ===");
+        response.status(500).send("Internal server error");
+    }
+};
+
+export const getContactsForDMList = async (request, response, next) => {
+    try {
+        let { userID } = request;
+        userID = new mongoose.Types.ObjectId(userID);
+
+        const contacts = await Message.aggregate([
+            {
+                $match: {
+                    $or: [{ sender: userID }, { recipient: userID }],
+                },
+            },
+            {$sort: { timestamp: -1 }},
+            {
+                $group: {
+                    _id: {
+                        $cond: {
+                            if: { $eq: ["$sender", userID] },
+                            then: "$recipient",
+                            else: "$sender",
+                        },
+                    },
+                    lastMessageTime: { $first: "$timestamp" },
+                },
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "contactInfo",
+                },
+            },
+            {
+                $unwind: "$contactInfo",
+            },
+            {
+                $project: {
+                    _id: 1,
+                    lastMessageTime: 1,
+                    email: "$contactInfo.email",
+                    firstName: "$contactInfo.firstName",
+                    lastName: "$contactInfo.lastName",
+                    image: "$contactInfo.image",
+                    color: "$contactInfo.color",
+                },
+            },
+            {
+                $sort: { lastMessageTime: -1 },
+            }
+        ]);
+                
+        return response.status(200).json({ contacts });
+        
+    } catch (error) {
         response.status(500).send("Internal server error");
     }
 };
