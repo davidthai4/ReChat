@@ -28,7 +28,7 @@ export const signup = async (request, response, next) => {
         const newUser = await User.create({ email, password });
         
         // Set JWT token as secure cookie
-        response.cookie("jwt", createToken(newUser.email, newUser.id), {
+        response.cookie("jwt", createToken(newUser.email, newUser._id), {
             maxAge,              // Cookie expires in 3 days
             secure: true,        // Only send over HTTPS
             sameSite: "None",    // Allow cross-site requests
@@ -37,7 +37,7 @@ export const signup = async (request, response, next) => {
         // Send success response with user data (excluding password)
         return response.status(201).json({
             user:{
-                id: newUser.id,
+                id: newUser._id,
                 email: newUser.email,
                 profileSetup: newUser.profileSetup,
             }
@@ -72,7 +72,7 @@ export const login = async (request, response, next) => {
             return response.status(401).send("Password is incorrect.");
         }
         // Set JWT token as secure cookie
-        response.cookie("jwt", createToken(user.email, user.id), {
+        response.cookie("jwt", createToken(user.email, user._id), {
             maxAge,              // Cookie expires in 3 days
             secure: true,        // Only send over HTTPS
             sameSite: "None",    // Allow cross-site requests
@@ -81,7 +81,7 @@ export const login = async (request, response, next) => {
         // Send success response with user data - excluding password but now including profile details
         return response.status(200).json({
             user:{
-                id: user.id,
+                id: user._id,
                 email: user.email,
                 profileSetup: user.profileSetup,
                 firstName: user.firstName,
@@ -108,7 +108,7 @@ export const getUserInfo = async (request, response, next) => {
         }        
         return response.status(200).json({
     
-            id: userData.id,
+            id: userData._id,
             email: userData.email,
             profileSetup: userData.profileSetup,
             firstName: userData.firstName,
@@ -140,7 +140,7 @@ export const updateProfile = async (request, response, next) => {
             { new: true, runValidators: true } // Return the updated document
         );
         return response.status(200).json({
-            id: userData.id,
+            id: userData._id,
             email: userData.email,
             profileSetup: userData.profileSetup,
             firstName: userData.firstName,

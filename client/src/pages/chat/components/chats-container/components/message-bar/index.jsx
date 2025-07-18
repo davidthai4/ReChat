@@ -36,8 +36,8 @@ const MessageBar = () => {
         }
         if (selectedChatType === "contact" && message.trim()) {
             const msgData = {
-                sender: userInfo.id,
-                recipient: selectedChatData.id,
+                sender: userInfo._id,
+                recipient: selectedChatData._id,
                 messageType: "text",
                 content: message,
                 fileUrl: undefined,

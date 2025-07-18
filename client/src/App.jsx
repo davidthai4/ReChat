@@ -35,9 +35,9 @@ const App = () => {
         const response = await apiClient.get(GET_USER_INFO, {
           withCredentials: true
         });
-        if (response.status === 200 && response.data.id) {
+        if (response.status === 200 && response.data._id) {
           // If user data is successfully fetched, update the store
-          setUserInfo(response.data);
+          setUserInfo({ ...response.data, id: response.data._id });
         } else {
           setUserInfo(undefined); // If no user data, reset to undefined
         }

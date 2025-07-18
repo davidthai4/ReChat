@@ -6,6 +6,7 @@ import cors from "cors";              // Allow cross-origin requests
 import authRoutes from "./routes/AuthRoutes.js"; // Import authentication routes
 import contactRoutes from "./routes/ContactRoutes.js"; // Import contact routes
 import setupSocket from "./socket.js";
+import messagesRoutes from "./routes/MessagesRoutes.js";
 
 // Load environment variables
 dotenv.config();
@@ -32,6 +33,7 @@ app.use(cookieParser());      // Parse cookies from requests
 
 app.use("/api/auth", authRoutes); // Mount authentication routes
 app.use("/api/contacts", contactRoutes); // Mount contact routes
+app.use("/api/messages", messagesRoutes); // Mount messages routes
 // Start server
 const server = app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);

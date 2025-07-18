@@ -22,10 +22,10 @@ export const createChatSlice = (set, get) => ({
             ...message,
             sender: selectedChatType === "channel" 
                 ? message.sender 
-                : (message.sender._id || message.sender.id || message.sender),
+                : (message.sender._id || message.sender),
             recipient: selectedChatType === "channel" 
                 ? message.recipient 
-                : (message.recipient._id || message.recipient.id || message.recipient),
+                : (message.recipient._id || message.recipient),
         };
 
         // console.log("Processed message:", processedMessage);

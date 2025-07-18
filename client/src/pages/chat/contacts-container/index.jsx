@@ -44,7 +44,7 @@ const Logo = () => {
                     fill="#8338ec"
                 ></path>
                 <path
-                    d="M35.5 0H51.5L32.5 32H16.5L35.5 OZ"
+                    d="M35.5 0H51.5L32.5 32H16.5L35.5 0Z"
                     className="ccompli1"
                     fill="#975aed"
                 ></path>

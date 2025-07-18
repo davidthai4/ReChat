@@ -49,7 +49,7 @@ const NewDM = () => {
         console.log("Starting conversation with:", contact);
         setOpenNewContactModel(false);
         setSelectedChatType("contact");
-        setSelectedChatData({ ...contact, id: contact._id });
+        setSelectedChatData({ ...contact, id: contact._id, _id: contact._id });
         setSearchContacts([]);
     };
 
@@ -79,7 +79,7 @@ const NewDM = () => {
                         <ScrollArea className="h-[250px]">
                             <div className="flex flex-col gap-2">
                                 {searchedContacts.map((contact) => (
-                                    <div key={contact.id} className="flex gap-3 items-center cursor-pointer hover:bg-[#2c2e3b] p-2 rounded" onClick={() => selectNewContact(contact)}>
+                                    <div key={contact._id} className="flex gap-3 items-center cursor-pointer hover:bg-[#2c2e3b] p-2 rounded" onClick={() => selectNewContact(contact)}>
                                         <div className="w-12 h-12 relative">
                                             <Avatar className="h-12 w-12 rounded-full overflow-hidden">
                                                 {contact.image ? (

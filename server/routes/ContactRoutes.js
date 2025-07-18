@@ -12,7 +12,7 @@ contactsRoutes.get("/test-users", verifyToken, async (req, res) => {
         res.json({ 
             totalUsers: allUsers.length,
             users: allUsers.map(u => ({
-                id: u.id,
+                id: u._id,
                 email: u.email,
                 firstName: u.firstName,
                 lastName: u.lastName,

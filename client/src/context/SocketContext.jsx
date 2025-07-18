@@ -18,7 +18,7 @@ export const SocketProvider = ({ children }) => {
         if (userInfo) {
             socket.current = io(HOST, {
                 withCredentials: true,
-                query: { userID: userInfo.id },
+                query: { userID: userInfo._id },
             });
             socket.current.on("connect", () => {
                 console.log("Connected to socket server.");
@@ -37,7 +37,7 @@ export const SocketProvider = ({ children }) => {
                 // Extract the actual ID strings
                 const senderId = message.sender._id || message.sender.id || message.sender;
                 const recipientId = message.recipient._id || message.recipient.id || message.recipient;
-                const currentChatId = selectedChatData?.id || selectedChatData?._id;
+                const currentChatId = selectedChatData?._id || selectedChatData?.id;
                 
                 // console.log("Sender ID:", senderId);
                 // console.log("Recipient ID:", recipientId);
