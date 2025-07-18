@@ -26,6 +26,7 @@ app.use(
 );
 
 app.use("/uploads/profiles", express.static("uploads/profiles")); // Serve static files from 'uploads' directory
+app.use("/uploads/files", express.static("uploads/files")); // Serve static files from 'uploads' directory
 
 // Middleware setup
 app.use(express.json());      // Parse JSON from request body

@@ -23,6 +23,11 @@ const setupSocket = (server) => {
     };
 
     const sendMessage = async (message, socket) => {
+        // Ensure compatibility: if message.file exists, rename to fileUrl
+        if (message.file && !message.fileUrl) {
+            message.fileUrl = message.file;
+            delete message.file;
+        }
         // console.log("sendMessage called with:", message);
         // console.log("userSocketMap keys:", Array.from(userSocketMap.keys()));
         // console.log("Looking for recipient:", message.recipient);
@@ -54,7 +59,7 @@ const setupSocket = (server) => {
             // console.log("User ID not provided during connection.");
         }        
         socket.on("sendMessage", (data) => {
-            // console.log("sendMessage event received:", data);
+            console.log("sendMessage event received:", data);
             sendMessage(data, socket);
         });
         socket.on("disconnect", () => disconnect(socket));
