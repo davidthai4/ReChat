@@ -33,15 +33,21 @@ export const createChatSlice = (set, get) => ({
         // console.log("Current messages count:", selectedChatMessages.length);
         // console.log("Selected chat type:", selectedChatType);
 
+        // Handle Mongoose documents (with _doc property) and plain objects
+        let messageData = message;
+        if (message._doc) {
+            messageData = message._doc;
+        }
+
         // Handle both sent messages (with IDs) and received messages (with full objects)
         const processedMessage = {
-            ...message,
+            ...messageData,
             sender: selectedChatType === "channel" 
-                ? message.sender 
-                : (message.sender._id || message.sender),
+                ? messageData.sender 
+                : (messageData.sender._id || messageData.sender),
             recipient: selectedChatType === "channel" 
-                ? message.recipient 
-                : (message.recipient._id || message.recipient),
+                ? messageData.recipient 
+                : (messageData.recipient._id || messageData.recipient),
         };
 
         // console.log("Processed message:", processedMessage);

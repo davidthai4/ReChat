@@ -52,7 +52,24 @@ const MessageBar = () => {
             // console.log("Emitting sendMessage", msgData);
             socket.emit("sendMessage", msgData);
             setMessage("");
+        } else if (selectedChatType === "channel") {
+            // console.log("Sending channel message:", {
+            //     sender: userInfo.id,
+            //     content: message,
+            //     messageType: "text",
+            //     fileUrl: undefined,
+            //     channelId: selectedChatData._id,
+            // });
+            socket.emit("sendChannelMessage", {
+                sender: userInfo.id,
+                content: message,
+                messageType: "text",
+                fileUrl: undefined,
+                channelId: selectedChatData._id,
+            });
+            
         }
+        setMessage("");
     };
 
     const handleKeyPress = (e) => {
@@ -97,6 +114,14 @@ const MessageBar = () => {
                             messageType: "file",
                             content: undefined,
                             fileUrl: response.data.filePath,
+                        });
+                    } else if (selectedChatType === "channel") {
+                        socket.emit("sendChannelMessage", {
+                            sender: userInfo.id,
+                            content: undefined,
+                            messageType: "file",
+                            fileUrl: response.data.filePath,
+                            channelId: selectedChatData._id,
                         });
                     }
                 }

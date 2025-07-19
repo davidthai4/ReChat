@@ -10,7 +10,16 @@ const messageSchema = new mongoose.Schema({
     recipient: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true,
+        required: function() {
+            return !this.channelId; // Required only if not a channel message
+        },
+    },
+    channelId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Channel",
+        required: function() {
+            return !this.recipient; // Required only if not a direct message
+        },
     },
     messageType: {
         type: String,

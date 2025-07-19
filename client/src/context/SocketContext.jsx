@@ -57,7 +57,32 @@ export const SocketProvider = ({ children }) => {
                 // console.log("=== END DEBUG ===");
             };
 
+            const handleReceiveChannelMessage = (message) => {
+                // console.log("=== RECEIVED CHANNEL MESSAGE DEBUG ===");
+                // console.log("Received channel message:", message);
+                const { selectedChatType, selectedChatData, addMessage } = useAppStore.getState();
+                // console.log("Selected chat type:", selectedChatType);
+                // console.log("Selected chat data:", selectedChatData);
+                // console.log("Message channel ID:", message.channelId);
+                // console.log("Selected chat data ID:", selectedChatData?._id);
+                // console.log("Are IDs equal?", selectedChatData?._id === message.channelId);
+
+                if (
+                    selectedChatType === "channel" &&
+                    selectedChatData?._id === message.channelId
+                ) {
+                    // console.log("Adding channel message to chat");
+                    addMessage(message);
+                } else {
+                    // console.log("Channel message not for current chat, ignoring");
+                    // console.log("Selected chat type is:", selectedChatType);
+                    // console.log("Expected: channel, got:", selectedChatType);
+                }
+                // console.log("=== END CHANNEL MESSAGE DEBUG ===");
+            };
+
             socket.current.on("receiveMessage", handleReceiveMessage);
+            socket.current.on("receive-channel-message", handleReceiveChannelMessage);
 
             return () => {
                 socket.current.disconnect();
