@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { verifyToken } from "../middleware/AuthMiddleware.js";
-import { getContactsForDMList, searchContacts } from "../controllers/ContactsController.js";
+import { getContactsForDMList, searchContacts, getAllContacts } from "../controllers/ContactsController.js";
 import User from "../models/UserModel.js"; // Added import for User model
 
 
@@ -27,5 +27,6 @@ const contactsRoutes = Router();
 
 contactsRoutes.post("/search", verifyToken, searchContacts);
 contactsRoutes.get("/get-contacts-for-dm", verifyToken, getContactsForDMList);
+contactsRoutes.get("/get-all-contacts", verifyToken, getAllContacts);
 
 export default contactsRoutes;
