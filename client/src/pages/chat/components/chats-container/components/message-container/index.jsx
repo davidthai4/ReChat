@@ -1,14 +1,20 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useAppStore } from "@/store";
 import moment from "moment";
 import { GET_ALL_MESSAGES_ROUTE } from "@/utils/constants";
 import { apiClient } from "@/lib/api-client";
 import { HOST } from "@/utils/constants";
 import { MdFolderZip } from "react-icons/md";
+import { IoMdArrowRoundDown } from "react-icons/io";
+import { IoCloseSharp } from "react-icons/io5";
 
 const MessageContainer = () => {
     const scrollRef = useRef(null);
     const { selectedChatType, selectedChatData, userInfo, selectedChatMessages, setSelectedChatMessages } = useAppStore();
+    const [showImage, setShowImage] = useState(false);
+    const [imageUrl, setImageUrl] = useState(null);
+    const [imageFilePath, setImageFilePath] = useState(null);
+    
 
     useEffect(() => {
         const getMessages = async () => {
@@ -62,6 +68,18 @@ const MessageContainer = () => {
         return imageRegex.test(filePath);
     };
 
+    const downloadFile = async (url) => {
+        const response = await apiClient.get(`${HOST}/${url}`, { responseType: "blob" });
+        const urlBlob = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = urlBlob;
+        link.setAttribute("download", url.split("/").pop());
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(urlBlob);
+    };
+
     const renderDMMessages = (message) => (
         <div className={`${
             message.sender === selectedChatData._id ? "text-left" : "text-right"
@@ -86,7 +104,11 @@ const MessageContainer = () => {
                         } border inline-block p-4 rounded my-1 max-w-[50] break-words`}
                     >
                         {checkIfImage(message.fileUrl) ? (
-                            <div className="cursor-pointer">
+                            <div className="cursor-pointer" onClick={()=>{
+                                setShowImage(true);
+                                setImageUrl(`${HOST}/${message.fileUrl}`);
+                                setImageFilePath(message.fileUrl);
+                            }}>
                                 <img src={`${HOST}/${message.fileUrl}`} height={300} width={300} />
                             </div> 
                             ) : (  
@@ -95,10 +117,10 @@ const MessageContainer = () => {
                                 <MdFolderZip />
                                 </span>
                                 <span>
-                                    {message.fileUrl ?message.fileUrl.split("/").pop() : ""}
+                                    {message.fileUrl ? message.fileUrl.split("/").pop() : ""}
                                 </span>
-                                <span>
-
+                                <span className="bg-black/20 p-3 text-2xl rounded-full hover:bg-black/50 cursor-pointer transition-all duration-300" onClick={()=>downloadFile(message.fileUrl)}>
+                                    <IoMdArrowRoundDown />
                                 </span>
 
                             </div>)}
@@ -115,6 +137,24 @@ const MessageContainer = () => {
         <div className="flex-1 overflow-y-auto scrollbar-hidden p-4 px-8 md:w-[65vw] lg:w-[70vw] xl:w-[80vw] w-full">
             {renderMessages()}
             <div ref={scrollRef} />
+            {
+                showImage && <div className="fixed z-[1000] top-0 left-0 h-[100vh] w-[100vw] flex items-center justify-center backdrop-blur-lg"> 
+                    <div className="flex flex-col items-center">
+                        <div className="flex gap-5 mb-4">
+                            <button className="bg-black/20 p-3 text-2xl rounded-full hover:bg-black/50 cursor-pointer transition-all duration-300" onClick={()=>downloadFile(imageFilePath)}>
+                            <IoMdArrowRoundDown /></button>
+                            <button className="bg-black/20 p-3 text-2xl rounded-full hover:bg-black/50 cursor-pointer transition-all duration-300" onClick={()=>setShowImage(false)}>
+                            <IoCloseSharp /></button>
+                        </div>
+                        <div>
+                            <img 
+                                src={imageUrl}
+                                className="h-[80vh] w-full bg-cover"
+                            />
+                        </div>
+                    </div>
+                </div>
+            }
         </div>
     );
 };
