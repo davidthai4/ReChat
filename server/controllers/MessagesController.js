@@ -3,23 +3,114 @@ import { mkdirSync } from "fs";
 import { renameSync } from "fs";
 
 
-export const getMessages = async (request, response, next) => {
+export const getMessages = async (req, res) => {
     try {
-        const user1 = request.userID;
-        const user2 = request.body.id;
-        if (!user1 || !user2) {
-            return response.status(400).send("Both User IDs are required.");
-        }
+        const { recipientId } = req.params;
+        const senderId = req.userID;
+
         const messages = await Message.find({
-            $or:[
-                { sender: user1, recipient: user2 }, 
-                { sender: user2, recipient: user1 }
+            $or: [
+                { sender: senderId, recipient: recipientId },
+                { sender: recipientId, recipient: senderId },
             ],
-        }).sort({ timestamp: 1 })
-        return response.status(200).json({ messages });
+        })
+            .populate("sender", "firstName lastName email image color")
+            .populate("recipient", "firstName lastName email image color")
+            .sort({ timestamp: 1 });
+
+        // Migrate existing messages to have readBy field
+        for (const message of messages) {
+            if (!message.readBy) {
+                await Message.updateOne(
+                    { _id: message._id },
+                    { $set: { readBy: [] } }
+                );
+                message.readBy = [];
+            }
+        }
+
+        res.json(messages);
     } catch (error) {
-        console.log({ error });
-        return response.status(500).send("Internal Server Error");
+        console.error("Error fetching messages:", error);
+        res.status(500).json({ error: "Failed to fetch messages" });
+    }
+};
+
+export const markMessageAsRead = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.userID;
+
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ error: "Message not found" });
+        }
+
+        // Initialize readBy array if it doesn't exist
+        if (!message.readBy) {
+            message.readBy = [];
+        }
+
+        // Check if user already marked this message as read
+        const alreadyRead = message.readBy.some(read => read.user.toString() === userId);
+        if (!alreadyRead) {
+            // Use updateOne to avoid triggering full validation
+            await Message.updateOne(
+                { _id: messageId },
+                { 
+                    $push: { 
+                        readBy: {
+                            user: userId,
+                            readAt: new Date(),
+                        }
+                    }
+                }
+            );
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Error marking message as read:", error);
+        res.status(500).json({ error: "Failed to mark message as read" });
+    }
+};
+
+export const markChannelMessageAsRead = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.userID;
+
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ error: "Message not found" });
+        }
+
+        // Initialize readBy array if it doesn't exist
+        if (!message.readBy) {
+            message.readBy = [];
+        }
+
+        // Check if user already marked this message as read
+        const alreadyRead = message.readBy.some(read => read.user.toString() === userId);
+        if (!alreadyRead) {
+            // Use updateOne to avoid triggering full validation
+            await Message.updateOne(
+                { _id: messageId },
+                { 
+                    $push: { 
+                        readBy: {
+                            user: userId,
+                            readAt: new Date(),
+                        }
+                    }
+                }
+            );
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Error marking channel message as read:", error);
+        res.status(500).json({ error: "Failed to mark channel message as read" });
     }
 };
 

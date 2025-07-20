@@ -52,6 +52,88 @@ const setupSocket = (server) => {
         }
     };
 
+    const markMessageAsRead = async (messageId, userId, socket) => {
+        try {
+            const message = await Message.findById(messageId);
+            if (!message) return;
+
+            // Initialize readBy array if it doesn't exist
+            if (!message.readBy) {
+                message.readBy = [];
+            }
+
+            // Check if user already marked this message as read
+            const alreadyRead = message.readBy.some(read => read.user.toString() === userId);
+            if (!alreadyRead) {
+                // Use updateOne to avoid triggering full validation
+                await Message.updateOne(
+                    { _id: messageId },
+                    { 
+                        $push: { 
+                            readBy: {
+                                user: userId,
+                                readAt: new Date(),
+                            }
+                        }
+                    }
+                );
+            }
+
+            // Emit read receipt to message sender
+            const senderSocketID = userSocketMap.get(message.sender.toString());
+            if (senderSocketID) {
+                io.to(senderSocketID).emit("messageRead", {
+                    messageId,
+                    readBy: userId,
+                    readAt: new Date(),
+                });
+            }
+        } catch (error) {
+            console.error("Error marking message as read:", error);
+        }
+    };
+
+    const markChannelMessageAsRead = async (messageId, userId, socket) => {
+        try {
+            const message = await Message.findById(messageId);
+            if (!message) return;
+
+            // Initialize readBy array if it doesn't exist
+            if (!message.readBy) {
+                message.readBy = [];
+            }
+
+            // Check if user already marked this message as read
+            const alreadyRead = message.readBy.some(read => read.user.toString() === userId);
+            if (!alreadyRead) {
+                // Use updateOne to avoid triggering full validation
+                await Message.updateOne(
+                    { _id: messageId },
+                    { 
+                        $push: { 
+                            readBy: {
+                                user: userId,
+                                readAt: new Date(),
+                            }
+                        }
+                    }
+                );
+            }
+
+            // Emit read receipt to message sender
+            const senderSocketID = userSocketMap.get(message.sender.toString());
+            if (senderSocketID) {
+                io.to(senderSocketID).emit("channelMessageRead", {
+                    messageId,
+                    readBy: userId,
+                    readAt: new Date(),
+                });
+            }
+        } catch (error) {
+            console.error("Error marking channel message as read:", error);
+        }
+    };
+
     const sendChannelMessage = async (message, socket) => {
         // console.log("=== CHANNEL MESSAGE DEBUG ===");
         // console.log("Received channel message:", message);
@@ -134,6 +216,12 @@ const setupSocket = (server) => {
             sendMessage(data, socket);
         });
         socket.on("sendChannelMessage", sendChannelMessage);
+        socket.on("markMessageAsRead", (data) => {
+            markMessageAsRead(data.messageId, data.userId, socket);
+        });
+        socket.on("markChannelMessageAsRead", (data) => {
+            markChannelMessageAsRead(data.messageId, data.userId, socket);
+        });
         socket.on("disconnect", () => disconnect(socket));
     });
 };

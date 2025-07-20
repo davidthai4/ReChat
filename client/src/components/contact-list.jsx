@@ -5,7 +5,7 @@ import { HOST } from "@/utils/constants";
 import moment from "moment";
 
 const ContactList = ({ contacts, isChannel = false }) => {
-    const { selectedChatData, setSelectedChatData, selectedChatType, setSelectedChatType, setSelectedChatMessages, addContact, userInfo } = useAppStore();
+    const { selectedChatData, setSelectedChatData, selectedChatType, setSelectedChatType, setSelectedChatMessages, addContact, userInfo, readStatus, markConversationAsRead } = useAppStore();
 
     const handleClick = (contact) => {
         if (isChannel) {
@@ -24,6 +24,9 @@ const ContactList = ({ contacts, isChannel = false }) => {
         if (selectedChatData && selectedChatData._id !== contact._id) {
             setSelectedChatMessages([]);
         }
+        
+        // Mark conversation as read when clicked
+        markConversationAsRead(contact._id);
     };
 
     const getLastMessagePreview = (contact) => {
@@ -61,9 +64,28 @@ const ContactList = ({ contacts, isChannel = false }) => {
         return "";
     };
 
+    const isUnread = (contact) => {
+        if (!contact.lastMessage) return false;
+        
+        // Don't mark as unread if the last message was sent by the current user
+        if (contact.lastMessage.sender && contact.lastMessage.sender._id === userInfo.id) {
+            return false;
+        }
+        
+        const lastReadTime = readStatus[contact._id];
+        if (!lastReadTime) return true; // Never read
+        
+        const messageTime = new Date(contact.lastMessage.timestamp);
+        const readTime = new Date(lastReadTime);
+        
+        return messageTime > readTime;
+    };
+
     return (
         <div className="mt-5">
-            {contacts.map((contact) => (
+            {contacts.map((contact) => {
+                const unread = isUnread(contact);
+                return (
                 <div key={contact._id} className={`pl-10 py-3 transition-all duration-300 cursor-pointer ${selectedChatData && (selectedChatData._id === contact._id) 
                     ? "bg-[#8417ff] hover:bg-[#8417ff]" 
                     : "hover:bg-[#f1f1f111]"}`} 
@@ -95,10 +117,10 @@ const ContactList = ({ contacts, isChannel = false }) => {
                             isChannel && <div className="bg-[#ffffff22] h-10 w-10 flex items-center justify-center rounded-full">#</div>
                         }
                         <div className="flex flex-col">
-                            <span className="font-medium">
+                            <span className={`font-medium ${unread ? 'font-bold' : ''}`}>
                                 {isChannel ? contact.name : `${contact.firstName} ${contact.lastName}`}
                             </span>
-                            <span className="text-sm text-neutral-400">
+                            <span className={`text-sm text-neutral-400 ${unread ? 'font-bold text-white' : ''}`}>
                                 {getLastMessagePreview(contact)}
                             </span>
                         </div>
@@ -108,7 +130,8 @@ const ContactList = ({ contacts, isChannel = false }) => {
                         </div>
                     </div>
                 </div> 
-            ))}
+                );
+            })}
         </div>
     );
 };

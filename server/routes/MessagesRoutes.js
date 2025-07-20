@@ -1,12 +1,11 @@
-import { Router } from "express";
-import { getMessages, uploadFile } from "../controllers/MessagesController.js";
+import express from "express";
+import { getMessages, markMessageAsRead, markChannelMessageAsRead } from "../controllers/MessagesController.js";
 import { verifyToken } from "../middleware/AuthMiddleware.js";
-import multer from "multer";
 
-const messagesRoutes = Router();
-const upload = multer({ dest: "uploads/files" });
+const router = express.Router();
 
-messagesRoutes.post("/get-messages", verifyToken, getMessages);
-messagesRoutes.post("/upload-file", verifyToken, upload.single("file"), uploadFile);
+router.get("/:recipientId", verifyToken, getMessages);
+router.post("/:messageId/read", verifyToken, markMessageAsRead);
+router.post("/channel/:messageId/read", verifyToken, markChannelMessageAsRead);
 
-export default messagesRoutes;
+export default router;

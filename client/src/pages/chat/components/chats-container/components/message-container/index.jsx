@@ -1,7 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import { useAppStore } from "@/store";
 import moment from "moment";
-import { GET_ALL_MESSAGES_ROUTE } from "@/utils/constants";
 import { apiClient } from "@/lib/api-client";
 import { HOST } from "@/utils/constants";
 import { MdFolderZip } from "react-icons/md";
@@ -22,12 +21,11 @@ const MessageContainer = () => {
     useEffect(() => {
         const getMessages = async () => {
             try {
-                const response = await apiClient.post(GET_ALL_MESSAGES_ROUTE, 
-                    { id: selectedChatData._id }, 
+                const response = await apiClient.get(`/api/messages/${selectedChatData._id}`, 
                     { withCredentials: true }
                 );
-                if (response.data.messages) {
-                    setSelectedChatMessages(response.data.messages);
+                if (response.data) {
+                    setSelectedChatMessages(response.data);
                 }
             } catch (error) {
                 console.log({ error });
@@ -64,6 +62,39 @@ const MessageContainer = () => {
             scrollRef.current.scrollIntoView({ behavior: "smooth" });
         }
     }, [selectedChatMessages]);
+
+    // Mark messages as read when they come into view
+    useEffect(() => {
+        if (selectedChatMessages.length > 0 && selectedChatData) {
+            const unreadMessages = selectedChatMessages.filter(message => {
+                // Only mark messages from others as read
+                const isFromOthers = selectedChatType === "contact" 
+                    ? message.sender !== selectedChatData._id
+                    : message.sender._id !== userInfo.id;
+                
+                // Check if already read
+                const alreadyRead = message.readBy && message.readBy.some(read => 
+                    read.user === userInfo.id || read.user._id === userInfo.id
+                );
+                
+                return isFromOthers && !alreadyRead;
+            });
+
+            // Mark unread messages as read
+            unreadMessages.forEach(async (message) => {
+                try {
+                    if (selectedChatType === "contact") {
+                        await apiClient.post(`/api/messages/${message._id}/read`, {}, { withCredentials: true });
+                    } else {
+                        await apiClient.post(`/api/messages/channel/${message._id}/read`, {}, { withCredentials: true });
+                    }
+                } catch (error) {
+                    // Silently handle errors - don't block the UI
+                    console.log("Error marking message as read:", error.message);
+                }
+            });
+        }
+    }, [selectedChatMessages, selectedChatData, selectedChatType, userInfo.id]);
     
     const renderMessages = () => {
         let lastDate = null;
@@ -112,15 +143,19 @@ const MessageContainer = () => {
         setFileDownloadProgress(0);
     };
 
-    const renderDMMessages = (message) => (
+    const renderDMMessages = (message) => {
+        const isOwnMessage = message.sender._id === userInfo.id || message.sender === userInfo.id;
+        const hasReadReceipts = message.readBy && message.readBy.length > 0;
+        
+        return (
         <div className={`${
-            message.sender === selectedChatData._id ? "text-left" : "text-right"
+            isOwnMessage ? "text-right" : "text-left"
         }`}
         >
         {message.messageType === "text" && (
             <div 
                 className={`${
-                    message.sender !== selectedChatData._id
+                    isOwnMessage
                     ? "bg-[#8417ff]/5 text-[#8417ff]/90 border-[#8417ff]/50" : 
                     "bg-[#2a2b33]/5 text-white/80 border-[#ffffff]/20"
                     } border inline-block p-4 rounded my-1 max-w-[50] break-words`}
@@ -131,7 +166,7 @@ const MessageContainer = () => {
         {message.messageType === "file" && 
             <div 
             className={`${
-                message.sender !== selectedChatData._id
+                isOwnMessage
                 ? "bg-[#8417ff]/5 text-[#8417ff]/90 border-[#8417ff]/50" : 
                 "bg-[#2a2b33]/5 text-white/80 border-[#ffffff]/20"
                 } border inline-block p-4 rounded my-1 max-w-[50] break-words`}
@@ -162,9 +197,13 @@ const MessageContainer = () => {
         }
                 <div className="text-xs text-gray-600">
                     {moment(message.timestamp).format("LT")}
+                    {isOwnMessage && hasReadReceipts && (
+                        <span className="ml-2 text-green-500">Seen</span>
+                    )}
                 </div>
         </div>
     );
+    };
 
     const renderChannelMessages = (message) => {
         // Add defensive checks for message structure
@@ -172,6 +211,9 @@ const MessageContainer = () => {
             console.log("Invalid message structure:", message);
             return null;
         }
+
+        const isOwnMessage = message.sender._id === userInfo.id;
+        const hasReadReceipts = message.readBy && message.readBy.length > 0;
 
         return (
         <div className={`mt-5 ${message.sender._id !== userInfo.id ? "text-left" : "text-right"}`}>
@@ -245,7 +287,25 @@ const MessageContainer = () => {
                     </span>
                 </div>
             ) : (
-                <div className="text-xs text-white/60">{moment(message.timestamp).format("LT")}
+                <div className="text-xs text-white/60">
+                    {moment(message.timestamp).format("LT")}
+                    {isOwnMessage && hasReadReceipts && (
+                        <div className="mt-1">
+                            <span className="text-green-500">Seen by: </span>
+                            <span className="text-white/80">
+                                {message.readBy.map((read, index) => {
+                                    const reader = read.user;
+                                    const readerName = reader.firstName || reader.email;
+                                    return (
+                                        <span key={index}>
+                                            {readerName}
+                                            {index < message.readBy.length - 1 ? ", " : ""}
+                                        </span>
+                                    );
+                                })}
+                            </span>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

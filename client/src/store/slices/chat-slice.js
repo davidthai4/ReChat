@@ -8,6 +8,7 @@ export const createChatSlice = (set, get) => ({
     fileUploadProgress: 0,
     fileDownloadProgress: 0,
     channels: [],
+    readStatus: JSON.parse(localStorage.getItem('chatReadStatus') || '{}'), // Load from localStorage
     setChannels: (channels) => set({ channels }),
     setIsUploading: (isUploading) => set({ isUploading }),
     setIsDownloading: (isDownloading) => set({ isDownloading }),
@@ -17,6 +18,16 @@ export const createChatSlice = (set, get) => ({
     setSelectedChatData: (selectedChatData) => set({ selectedChatData }),
     setSelectedChatMessages: (selectedChatMessages) => set({ selectedChatMessages }),
     setDirectMessagesContacts: (directMessagesContacts) => set({ directMessagesContacts }),
+    markConversationAsRead: (conversationId) => {
+        const { readStatus } = get();
+        const newReadStatus = { 
+            ...readStatus, 
+            [conversationId]: new Date().toISOString() 
+        };
+        set({ readStatus: newReadStatus });
+        // Persist to localStorage
+        localStorage.setItem('chatReadStatus', JSON.stringify(newReadStatus));
+    },
     addChannel: (channel) => {
         const channels = get().channels;
         set({ channels: [channel, ...channels] });
@@ -36,7 +47,7 @@ export const createChatSlice = (set, get) => ({
         }
     },
     updateContactLastMessage: (contactId, lastMessage) => {
-        const { directMessagesContacts, userInfo } = get();
+        const { directMessagesContacts } = get();
         const updatedContacts = directMessagesContacts.map(contact => {
             if (contact._id === contactId) {
                 return { 
@@ -79,7 +90,7 @@ export const createChatSlice = (set, get) => ({
                         sender: lastMessage.sender || {
                             _id: lastMessage.sender_id || lastMessage.sender,
                             firstName: lastMessage.sender?.firstName,
-                            lastName: lastMessage.sender?.lastName,
+                            lastName: lastMessage.sender?.email,
                             email: lastMessage.sender?.email,
                         }
                     }
@@ -138,5 +149,18 @@ export const createChatSlice = (set, get) => ({
         
         // console.log("Message added to state");
         // console.log("=== END ADD MESSAGE DEBUG ===");
+    },
+    updateMessageReadStatus: (messageId, readBy, readAt) => {
+        const { selectedChatMessages } = get();
+        const updatedMessages = selectedChatMessages.map(message => {
+            if (message._id === messageId) {
+                return {
+                    ...message,
+                    readBy: [...(message.readBy || []), { user: readBy, readAt }]
+                };
+            }
+            return message;
+        });
+        set({ selectedChatMessages: updatedMessages });
     },
 });
