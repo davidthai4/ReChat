@@ -83,6 +83,9 @@ export const getContactsForDMList = async (request, response, next) => {
                         },
                     },
                     lastMessageTime: { $first: "$timestamp" },
+                    lastMessageContent: { $first: "$content" },
+                    lastMessageType: { $first: "$messageType" },
+                    lastMessageId: { $first: "$_id" },
                 },
             },
             {
@@ -100,6 +103,9 @@ export const getContactsForDMList = async (request, response, next) => {
                 $project: {
                     _id: 1,
                     lastMessageTime: 1,
+                    lastMessageContent: 1,
+                    lastMessageType: 1,
+                    lastMessageId: 1,
                     email: "$contactInfo.email",
                     firstName: "$contactInfo.firstName",
                     lastName: "$contactInfo.lastName",
@@ -111,8 +117,19 @@ export const getContactsForDMList = async (request, response, next) => {
                 $sort: { lastMessageTime: -1 },
             }
         ]);
+
+        // Transform to include lastMessage object
+        const contactsWithLastMessage = contacts.map(contact => ({
+            ...contact,
+            lastMessage: {
+                _id: contact.lastMessageId,
+                content: contact.lastMessageContent,
+                messageType: contact.lastMessageType,
+                timestamp: contact.lastMessageTime,
+            }
+        }));
                 
-        return response.status(200).json({ contacts });
+        return response.status(200).json({ contacts: contactsWithLastMessage });
         
     } catch (error) {
         response.status(500).send("Internal server error");

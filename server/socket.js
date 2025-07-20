@@ -58,8 +58,13 @@ const setupSocket = (server) => {
         const { channelId, sender, content, messageType, fileUrl } = message;
 
         // Validate message content
-        if (!content || content.trim() === '') {
+        if (messageType === "text" && (!content || content.trim() === '')) {
             // console.log("Empty message content, skipping save");
+            return;
+        }
+
+        if (messageType === "file" && !fileUrl) {
+            // console.log("File message without fileUrl, skipping save");
             return;
         }
 

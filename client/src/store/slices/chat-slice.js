@@ -21,14 +21,67 @@ export const createChatSlice = (set, get) => ({
         const channels = get().channels;
         set({ channels: [channel, ...channels] });
     },
+    addContact: (contact) => {
+        const { directMessagesContacts, userInfo } = get();
+        
+        // Don't add yourself to the contacts list
+        if (contact._id === userInfo.id) {
+            return;
+        }
+        
+        // Check if contact already exists
+        const existingContact = directMessagesContacts.find(c => c._id === contact._id);
+        if (!existingContact) {
+            set({ directMessagesContacts: [contact, ...directMessagesContacts] });
+        }
+    },
+    updateContactLastMessage: (contactId, lastMessage) => {
+        const { directMessagesContacts } = get();
+        const updatedContacts = directMessagesContacts.map(contact => {
+            if (contact._id === contactId) {
+                return { 
+                    ...contact, 
+                    lastMessage: {
+                        _id: lastMessage._id,
+                        content: lastMessage.content,
+                        messageType: lastMessage.messageType,
+                        timestamp: lastMessage.timestamp,
+                    }
+                };
+            }
+            return contact;
+        });
+        // Sort by most recent message
+        updatedContacts.sort((a, b) => {
+            const aTime = a.lastMessage?.timestamp || a.createdAt || 0;
+            const bTime = b.lastMessage?.timestamp || b.createdAt || 0;
+            return new Date(bTime) - new Date(aTime);
+        });
+        set({ directMessagesContacts: updatedContacts });
+    },
+    updateChannelLastMessage: (channelId, lastMessage) => {
+        const { channels } = get();
+        const updatedChannels = channels.map(channel => {
+            if (channel._id === channelId) {
+                return { ...channel, lastMessage };
+            }
+            return channel;
+        });
+        // Sort by most recent message
+        updatedChannels.sort((a, b) => {
+            const aTime = a.lastMessage?.timestamp || a.createdAt || 0;
+            const bTime = b.lastMessage?.timestamp || b.createdAt || 0;
+            return new Date(bTime) - new Date(aTime);
+        });
+        set({ channels: updatedChannels });
+    },
     closeChat: () =>
         set({ selectedChatType: undefined, selectedChatData: undefined, selectedChatMessages: [] }),
     addMessage: (message) => {
         // console.log("=== ADD MESSAGE DEBUG ===");
         // console.log("Adding message:", message);
         
-        const { selectedChatMessages } = get();
-        const { selectedChatType } = get();
+        const { selectedChatMessages, selectedChatType, selectedChatData } = get();
         
         // console.log("Current messages count:", selectedChatMessages.length);
         // console.log("Selected chat type:", selectedChatType);
@@ -55,6 +108,13 @@ export const createChatSlice = (set, get) => ({
         set({
             selectedChatMessages: [...selectedChatMessages, processedMessage],
         });
+
+        // Update last message for the current conversation
+        if (selectedChatType === "contact" && selectedChatData) {
+            get().updateContactLastMessage(selectedChatData._id, processedMessage);
+        } else if (selectedChatType === "channel" && selectedChatData) {
+            get().updateChannelLastMessage(selectedChatData._id, processedMessage);
+        }
         
         // console.log("Message added to state");
         // console.log("=== END ADD MESSAGE DEBUG ===");

@@ -1,5 +1,6 @@
 import Channel from "../models/ChannelModel.js";
 import User from "../models/UserModel.js";
+import Message from "../models/MessagesModel.js";
 import mongoose from "mongoose";
 
 export const createChannel = async (request, response, next) => {
@@ -42,9 +43,34 @@ export const getUserChannels = async (request, response, next) => {
             $or: [{ admin: userID }, { members:  userID }],
         }).sort({ updatedAt: -1 });
 
+        // Get last message for each channel
+        const channelsWithLastMessage = await Promise.all(
+            channels.map(async (channel) => {
+                const lastMessage = await Message.findOne({ channelId: channel._id })
+                    .sort({ timestamp: -1 })
+                    .populate("sender", "firstName lastName email image color");
+                
+                return {
+                    ...channel.toObject(),
+                    lastMessage: lastMessage ? {
+                        _id: lastMessage._id,
+                        content: lastMessage.content,
+                        messageType: lastMessage.messageType,
+                        timestamp: lastMessage.timestamp,
+                        sender: lastMessage.sender,
+                    } : null,
+                };
+            })
+        );
 
+        // Sort by last message timestamp or channel creation date
+        channelsWithLastMessage.sort((a, b) => {
+            const aTime = a.lastMessage?.timestamp || a.createdAt;
+            const bTime = b.lastMessage?.timestamp || b.createdAt;
+            return new Date(bTime) - new Date(aTime);
+        });
 
-        return response.status(201).json({ channels });
+        return response.status(201).json({ channels: channelsWithLastMessage });
 
 
     } catch (error) {
