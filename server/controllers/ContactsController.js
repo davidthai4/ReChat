@@ -86,6 +86,7 @@ export const getContactsForDMList = async (request, response, next) => {
                     lastMessageContent: { $first: "$content" },
                     lastMessageType: { $first: "$messageType" },
                     lastMessageId: { $first: "$_id" },
+                    lastMessageSender: { $first: "$sender" },
                 },
             },
             {
@@ -100,17 +101,32 @@ export const getContactsForDMList = async (request, response, next) => {
                 $unwind: "$contactInfo",
             },
             {
+                $lookup: {
+                    from: "users",
+                    localField: "lastMessageSender",
+                    foreignField: "_id",
+                    as: "senderInfo",
+                },
+            },
+            {
+                $unwind: "$senderInfo",
+            },
+            {
                 $project: {
                     _id: 1,
                     lastMessageTime: 1,
                     lastMessageContent: 1,
                     lastMessageType: 1,
                     lastMessageId: 1,
+                    lastMessageSender: 1,
                     email: "$contactInfo.email",
                     firstName: "$contactInfo.firstName",
                     lastName: "$contactInfo.lastName",
                     image: "$contactInfo.image",
                     color: "$contactInfo.color",
+                    senderFirstName: "$senderInfo.firstName",
+                    senderLastName: "$senderInfo.lastName",
+                    senderEmail: "$senderInfo.email",
                 },
             },
             {
@@ -118,7 +134,7 @@ export const getContactsForDMList = async (request, response, next) => {
             }
         ]);
 
-        // Transform to include lastMessage object
+        // Transform to include lastMessage object with sender info
         const contactsWithLastMessage = contacts.map(contact => ({
             ...contact,
             lastMessage: {
@@ -126,6 +142,12 @@ export const getContactsForDMList = async (request, response, next) => {
                 content: contact.lastMessageContent,
                 messageType: contact.lastMessageType,
                 timestamp: contact.lastMessageTime,
+                sender: {
+                    _id: contact.lastMessageSender,
+                    firstName: contact.senderFirstName,
+                    lastName: contact.senderLastName,
+                    email: contact.senderEmail,
+                }
             }
         }));
                 

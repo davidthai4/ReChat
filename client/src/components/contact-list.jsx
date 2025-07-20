@@ -5,7 +5,7 @@ import { HOST } from "@/utils/constants";
 import moment from "moment";
 
 const ContactList = ({ contacts, isChannel = false }) => {
-    const { selectedChatData, setSelectedChatData, selectedChatType, setSelectedChatType, setSelectedChatMessages, addContact } = useAppStore();
+    const { selectedChatData, setSelectedChatData, selectedChatType, setSelectedChatType, setSelectedChatMessages, addContact, userInfo } = useAppStore();
 
     const handleClick = (contact) => {
         if (isChannel) {
@@ -28,11 +28,28 @@ const ContactList = ({ contacts, isChannel = false }) => {
 
     const getLastMessagePreview = (contact) => {
         if (contact.lastMessage) {
-            if (contact.lastMessage.content) {
-                return contact.lastMessage.content.length > 30 ? contact.lastMessage.content.substring(0, 30) + "..." : contact.lastMessage.content;
-            } else if (contact.lastMessage.messageType === "file") {
-                return "File sent";
+            let preview = "";
+            
+            // Add sender information
+            if (contact.lastMessage.sender) {
+                if (contact.lastMessage.sender._id === userInfo.id) {
+                    preview = "You: ";
+                } else if (isChannel) {
+                    // For channels, show sender's first name or email
+                    const senderName = contact.lastMessage.sender.firstName || contact.lastMessage.sender.email;
+                    preview = `${senderName}: `;
+                }
+                // For DMs from others, no prefix needed
             }
+            
+            // Add message content
+            if (contact.lastMessage.content) {
+                preview += contact.lastMessage.content.length > 30 ? contact.lastMessage.content.substring(0, 30) + "..." : contact.lastMessage.content;
+            } else if (contact.lastMessage.messageType === "file") {
+                preview += "File sent";
+            }
+            
+            return preview;
         }
         return "No messages yet";
     };

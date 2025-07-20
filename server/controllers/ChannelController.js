@@ -57,7 +57,12 @@ export const getUserChannels = async (request, response, next) => {
                         content: lastMessage.content,
                         messageType: lastMessage.messageType,
                         timestamp: lastMessage.timestamp,
-                        sender: lastMessage.sender,
+                        sender: {
+                            _id: lastMessage.sender._id,
+                            firstName: lastMessage.sender.firstName,
+                            lastName: lastMessage.sender.lastName,
+                            email: lastMessage.sender.email,
+                        }
                     } : null,
                 };
             })

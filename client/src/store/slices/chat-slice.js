@@ -36,7 +36,7 @@ export const createChatSlice = (set, get) => ({
         }
     },
     updateContactLastMessage: (contactId, lastMessage) => {
-        const { directMessagesContacts } = get();
+        const { directMessagesContacts, userInfo } = get();
         const updatedContacts = directMessagesContacts.map(contact => {
             if (contact._id === contactId) {
                 return { 
@@ -46,6 +46,12 @@ export const createChatSlice = (set, get) => ({
                         content: lastMessage.content,
                         messageType: lastMessage.messageType,
                         timestamp: lastMessage.timestamp,
+                        sender: lastMessage.sender || {
+                            _id: lastMessage.sender_id || lastMessage.sender,
+                            firstName: lastMessage.sender?.firstName,
+                            lastName: lastMessage.sender?.lastName,
+                            email: lastMessage.sender?.email,
+                        }
                     }
                 };
             }
@@ -63,7 +69,21 @@ export const createChatSlice = (set, get) => ({
         const { channels } = get();
         const updatedChannels = channels.map(channel => {
             if (channel._id === channelId) {
-                return { ...channel, lastMessage };
+                return { 
+                    ...channel, 
+                    lastMessage: {
+                        _id: lastMessage._id,
+                        content: lastMessage.content,
+                        messageType: lastMessage.messageType,
+                        timestamp: lastMessage.timestamp,
+                        sender: lastMessage.sender || {
+                            _id: lastMessage.sender_id || lastMessage.sender,
+                            firstName: lastMessage.sender?.firstName,
+                            lastName: lastMessage.sender?.lastName,
+                            email: lastMessage.sender?.email,
+                        }
+                    }
+                };
             }
             return channel;
         });
