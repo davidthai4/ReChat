@@ -7,9 +7,14 @@ const setupSocket = (server) => {
     const io = new SocketIOServer(server, {
         cors: {
             origin: process.env.ORIGIN,
+            // origin: "*", // for testing
             methods: ["GET", "POST"],
             credentials: true,
         },
+        transports: ["websocket", "polling"], // for testing
+        query: {
+            userID: "user1" // for testing
+        }
     });
 
     const userSocketMap = new Map();

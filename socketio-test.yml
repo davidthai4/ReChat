@@ -1,0 +1,45 @@
+config:
+  target: "http://localhost:8888"  # Replace with your backend port
+  phases:
+    - duration: 60
+      arrivalRate: 2  # 2 new users per second
+  engines:
+    socketio: {}
+scenarios:
+  - engine: "socketio"
+    socketio:
+      transports: ["websocket"]
+    flow:
+      # Send a direct message
+      - emit:
+          channel: "sendMessage"
+          data:
+            sender: "6878a65cfb543cd3fa73b75a"
+            recipient: "6879b9f9ea284f94bb18d927"
+            content: "Hello from user 1!"
+            messageType: "text"
+      - think: 1
+      # Send a channel message
+      - emit:
+          channel: "sendChannelMessage"
+          data:
+            channelId: "6882ce8008aa2ec2bf67a1eb"
+            sender: "6878a65cfb543cd3fa73b75a"
+            content: "Hello channel!"
+            messageType: "text"
+      - think: 1
+      # Mark a direct message as read
+      - emit:
+          channel: "markMessageAsRead"
+          data:
+            messageId: "687a0a039c67bba3252a7946"
+            userId: "6878a65cfb543cd3fa73b75a"
+      - think: 1
+      # Mark a channel message as read
+      - emit:
+          channel: "markChannelMessageAsRead"
+          data:
+            messageId: "6879a62974af9d7a228df147"
+            userId: "6878a65cfb543cd3fa73b75a"
+      - think: 1
+      # Simulate disconnect (handled automatically at end of scenario)

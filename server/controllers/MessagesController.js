@@ -1,6 +1,5 @@
 import Message from "../models/MessagesModel.js";
-import { mkdirSync } from "fs";
-import { renameSync } from "fs";
+import fs from "fs";
 
 
 export const getMessages = async (req, res) => {
@@ -115,6 +114,7 @@ export const markChannelMessageAsRead = async (req, res) => {
 };
 
 export const uploadFile = async (request, response, next) => {
+    console.log("uploadFile route hit");
     try {
         if (!request.file) {
             return response.status(400).send("No file uploaded.");
@@ -123,9 +123,9 @@ export const uploadFile = async (request, response, next) => {
         let fileDir = `uploads/files/${date}`;
         let fileName = `${fileDir}/${request.file.originalname}`;
 
-        mkdirSync(fileDir, { recursive: true });
+        fs.mkdirSync(fileDir, { recursive: true });
 
-        renameSync(request.file.path, fileName);
+        fs.renameSync(request.file.path, fileName);
         
         return response.status(200).json({ filePath: fileName });
     } catch (error) {
