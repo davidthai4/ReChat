@@ -18,13 +18,13 @@ A full-stack real-time chat application built with React, Node.js, Socket.IO, an
 ## Tech Stack
 
 ### Frontend
-- React 18 with Vite
-- Socket.IO Client
-- React Router for navigation
-- Zustand for state management
-- Tailwind CSS for styling
+- React 18.3.1 with Vite 7.0.2
+- Socket.IO Client 4.8.1
+- React Router DOM 7.6.3 for navigation
+- Zustand 5.0.6 for state management
+- Tailwind CSS 3.4.17 for styling
 - Radix UI for components
-- Axios for HTTP requests
+- Axios 1.10.0 for HTTP requests
 
 ### Backend
 - Node.js with Express
