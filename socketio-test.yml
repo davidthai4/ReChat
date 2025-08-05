@@ -1,0 +1,194 @@
+config:
+  target: "http://localhost:8888"  # Replace with your backend port
+  phases:
+    - duration: 60
+      arrivalRate: 2  # 2 new users per second
+  engines:
+    socketio: {}
+  processor: "./artillery-processor.js"  # Custom processor for file uploads
+  variables:
+    # Test user credentials - you should create these test users in your database
+    testUser1: "testuser1@example.com"
+    testUser1Password: "testpassword123"
+    testUser2: "testuser2@example.com"
+    testUser2Password: "testpassword123"
+scenarios:
+  # Socket.IO file message testing
+  - engine: "socketio"
+    name: "Socket File Message Test"
+    socketio:
+      transports: ["websocket"]
+    flow:
+      # Send a direct message
+      - emit:
+          channel: "sendMessage"
+          data:
+            sender: "6878a65cfb543cd3fa73b75a"
+            recipient: "6879b9f9ea284f94bb18d927"
+            content: "Hello from user 1!"
+            messageType: "text"
+      - think: 1
+      # Send a channel message
+      - emit:
+          channel: "sendChannelMessage"
+          data:
+            channelId: "6882ce8008aa2ec2bf67a1eb"
+            sender: "6878a65cfb543cd3fa73b75a"
+            content: "Hello channel!"
+            messageType: "text"
+      - think: 1
+      # Mark a direct message as read
+      - emit:
+          channel: "markMessageAsRead"
+          data:
+            messageId: "687a0a039c67bba3252a7946"
+            userId: "6878a65cfb543cd3fa73b75a"
+      - think: 1
+      # Mark a channel message as read
+      - emit:
+          channel: "markChannelMessageAsRead"
+          data:
+            messageId: "6879a62974af9d7a228df147"
+            userId: "6878a65cfb543cd3fa73b75a"
+      - think: 1
+      # Send a file message via socket (simulating after file upload)
+      - emit:
+          channel: "sendMessage"
+          data:
+            sender: "6878a65cfb543cd3fa73b75a"
+            recipient: "6879b9f9ea284f94bb18d927"
+            messageType: "file"
+            fileUrl: "uploads/files/{{ $randomNumber }}/test-file.txt"
+      - think: 1
+      # Send a file message to channel
+      - emit:
+          channel: "sendChannelMessage"
+          data:
+            channelId: "6882ce8008aa2ec2bf67a1eb"
+            sender: "6878a65cfb543cd3fa73b75a"
+            messageType: "file"
+            fileUrl: "uploads/files/{{ $randomNumber }}/test-document.pdf"
+      - think: 1
+      # Simulate disconnect (handled automatically at end of scenario)
+
+  # HTTP file upload testing with authentication
+  - name: "Authenticated File Upload Test"
+    weight: 3
+    flow:
+      # Login to get authentication token
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ testUser1 }}"
+            password: "{{ testUser1Password }}"
+          capture:
+            - json: "$.user._id"
+              as: "userId"
+            - header: "set-cookie"
+              as: "authCookie"
+          expect:
+            - statusCode: [200, 201]
+      - think: 1
+      # Upload a small test file
+      - upload:
+          url: "/api/messages/upload"
+          file: "./test-files/small-file.txt"
+          field: "file"
+          headers:
+            Cookie: "{{ authCookie }}"
+          expect:
+            - statusCode: [200, 201]
+      - think: 2
+      # Upload a medium test file
+      - upload:
+          url: "/api/messages/upload"
+          file: "./test-files/medium-file.pdf"
+          field: "file"
+          headers:
+            Cookie: "{{ authCookie }}"
+          expect:
+            - statusCode: [200, 201]
+      - think: 3
+      # Upload a large test file
+      - upload:
+          url: "/api/messages/upload"
+          file: "./test-files/large-file.zip"
+          field: "file"
+          headers:
+            Cookie: "{{ authCookie }}"
+          expect:
+            - statusCode: [200, 201]
+      - think: 2
+
+  # Concurrent file upload stress test
+  - name: "Concurrent File Upload Stress Test"
+    weight: 1
+    flow:
+      # Login first
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ testUser2 }}"
+            password: "{{ testUser2Password }}"
+          capture:
+            - header: "set-cookie"
+              as: "authCookie"
+          expect:
+            - statusCode: [200, 201]
+      - think: 1
+      # Generate and upload a test file
+      - function: "generateTestFile"
+      - upload:
+          url: "/api/messages/upload"
+          file: "{{ testFilePath }}"
+          field: "file"
+          headers:
+            Cookie: "{{ authCookie }}"
+          expect:
+            - statusCode: [200, 201]
+      - think: 1
+
+  # File upload performance test with different file types
+  - name: "File Upload Performance Test"
+    weight: 2
+    flow:
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ testUser1 }}"
+            password: "{{ testUser1Password }}"
+          capture:
+            - header: "set-cookie"
+              as: "authCookie"
+          expect:
+            - statusCode: [200, 201]
+      - think: 1
+      # Test different file types and sizes
+      - upload:
+          url: "/api/messages/upload"
+          file: "./test-files/small-file.txt"
+          field: "file"
+          headers:
+            Cookie: "{{ authCookie }}"
+          expect:
+            - statusCode: [200, 201]
+      - think: 1
+      - upload:
+          url: "/api/messages/upload"
+          file: "./test-files/medium-file.pdf"
+          field: "file"
+          headers:
+            Cookie: "{{ authCookie }}"
+          expect:
+            - statusCode: [200, 201]
+      - think: 2
+      - upload:
+          url: "/api/messages/upload"
+          file: "./test-files/large-file.zip"
+          field: "file"
+          headers:
+            Cookie: "{{ authCookie }}"
+          expect:
+            - statusCode: [200, 201]
+      - think: 3
