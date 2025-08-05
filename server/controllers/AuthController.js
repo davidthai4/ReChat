@@ -1,40 +1,32 @@
-import User from "../models/UserModel.js";  // User model for database operations
-import jwt from "jsonwebtoken";          // JWT token creation function
-import { compare } from "bcrypt";         // Password hashing comparison function
-import { renameSync, unlinkSync } from "fs";         // File system utility to rename files
+import User from "../models/UserModel.js";
+import jwt from "jsonwebtoken";
+import { compare } from "bcrypt";
+import { renameSync, unlinkSync } from "fs";
 
-// Token expiration time: 3 days in milliseconds
 const maxAge = 3 * 24 * 60 * 60 * 1000;
 
-// Create JWT token for user authentication
 const createToken = (email, userID) => {
     return jwt.sign({ email, userID }, process.env.JWT_KEY, {
         expiresIn: maxAge,
     });
 };
 
-// User signup route handler
 export const signup = async (request, response, next) => {
     try {
-        // Extract email and password from request body
         const {email, password} = request.body;
         
-        // Validate required fields
         if(!email || !password) {
             return response.status(400).send("Email and Password are required.");
         }
         
-        // Create new user in database (password will be auto-hashed by pre-save hook)
         const newUser = await User.create({ email, password });
         
-        // Set JWT token as secure cookie
         response.cookie("jwt", createToken(newUser.email, newUser._id), {
-            maxAge,              // Cookie expires in 3 days
-            secure: true,        // Only send over HTTPS
-            sameSite: "None",    // Allow cross-site requests
+            maxAge,
+            secure: true,
+            sameSite: "None",
         });
         
-        // Send success response with user data (excluding password)
         return response.status(201).json({
             user:{
                 _id: newUser._id,
@@ -44,41 +36,35 @@ export const signup = async (request, response, next) => {
         });
         
     } catch (error) {
-        // Log error for debugging
         console.log({ error });
-        // Send generic error response
         response.status(500).send("Internal server error");
     }
 };
 
 export const login = async (request, response, next) => {
     try {
-        // Extract email and password from request body
         const {email, password} = request.body;
         
-        // Validate required fields
         if(!email || !password) {
             return response.status(400).send("Email and Password are required.");
         }
         
-        // Find user by email
         const user = await User.findOne({ email });
         if(!user) {
             return response.status(404).send("User with this email was not found.");
         }
-        // Compare provided password with stored hashed password
+        
         const auth = await compare(password, user.password);
         if (!auth) {
             return response.status(401).send("Password is incorrect.");
         }
-        // Set JWT token as secure cookie
+        
         response.cookie("jwt", createToken(user.email, user._id), {
-            maxAge,              // Cookie expires in 3 days
-            secure: true,        // Only send over HTTPS
-            sameSite: "None",    // Allow cross-site requests
+            maxAge,
+            secure: true,
+            sameSite: "None",
         });
         
-        // Send success response with user data - excluding password but now including profile details
         return response.status(200).json({
             user:{
                 _id: user._id,
@@ -92,9 +78,7 @@ export const login = async (request, response, next) => {
         });
         
     } catch (error) {
-        // Log error for debugging
         console.log({ error });
-        // Send generic error response
         response.status(500).send("Internal server error");
     }
 };

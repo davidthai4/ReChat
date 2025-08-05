@@ -1,13 +1,13 @@
 #!/bin/bash
 
-echo "🧪 Testing endpoints..."
+echo "Testing endpoints..."
 
 # Test 1: Check if server is running
 echo "1. Testing server connectivity..."
 if curl -s http://localhost:8888/api/messages/test > /dev/null; then
-    echo "✅ Server is running"
+    echo "Server is running"
 else
-    echo "❌ Server is not running on localhost:8888"
+    echo "Server is not running on localhost:8888"
     exit 1
 fi
 
@@ -19,11 +19,11 @@ LOGIN_RESPONSE=$(curl -s -X POST http://localhost:8888/api/auth/login \
     -c cookies.txt)
 
 if echo "$LOGIN_RESPONSE" | grep -q "user"; then
-    echo "✅ Login successful"
+    echo "Login successful"
     USER_ID=$(echo "$LOGIN_RESPONSE" | grep -o '"_id":"[^"]*"' | cut -d'"' -f4)
     echo "User ID: $USER_ID"
 else
-    echo "❌ Login failed"
+    echo "Login failed"
     echo "Response: $LOGIN_RESPONSE"
 fi
 
@@ -38,15 +38,15 @@ UPLOAD_RESPONSE=$(curl -s -X POST http://localhost:8888/api/messages/upload \
     -b cookies.txt)
 
 if echo "$UPLOAD_RESPONSE" | grep -q "filePath"; then
-    echo "✅ File upload successful"
+    echo "File upload successful"
     FILE_PATH=$(echo "$UPLOAD_RESPONSE" | grep -o '"filePath":"[^"]*"' | cut -d'"' -f4)
     echo "File path: $FILE_PATH"
 else
-    echo "❌ File upload failed"
+    echo "File upload failed"
     echo "Response: $UPLOAD_RESPONSE"
 fi
 
 # Cleanup
 rm -f test-upload.txt cookies.txt
 
-echo -e "\n🎉 Endpoint testing complete!" 
+echo -e "\nEndpoint testing complete!" 

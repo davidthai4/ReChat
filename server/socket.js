@@ -30,17 +30,13 @@ const setupSocket = (server) => {
     };
 
     const sendMessage = async (message, socket) => {
-        // Ensure compatibility: if message.file exists, rename to fileUrl
         if (message.file && !message.fileUrl) {
             message.fileUrl = message.file;
             delete message.file;
         }
-        // console.log("sendMessage called with:", message);
-        // console.log("userSocketMap keys:", Array.from(userSocketMap.keys()));
-        // console.log("Looking for recipient:", message.recipient);
+        
         const senderSocketID = userSocketMap.get(message.sender);
         const recipientSocketID = userSocketMap.get(message.recipient);
-        // console.log("Recipient socket ID:", recipientSocketID);
 
         const createdMessage = await Message.create(message);
 
@@ -62,15 +58,12 @@ const setupSocket = (server) => {
             const message = await Message.findById(messageId);
             if (!message) return;
 
-            // Initialize readBy array if it doesn't exist
             if (!message.readBy) {
                 message.readBy = [];
             }
 
-            // Check if user already marked this message as read
             const alreadyRead = message.readBy.some(read => read.user.toString() === userId);
             if (!alreadyRead) {
-                // Use updateOne to avoid triggering full validation
                 await Message.updateOne(
                     { _id: messageId },
                     { 
@@ -84,7 +77,6 @@ const setupSocket = (server) => {
                 );
             }
 
-            // Emit read receipt to message sender
             const senderSocketID = userSocketMap.get(message.sender.toString());
             if (senderSocketID) {
                 io.to(senderSocketID).emit("messageRead", {
