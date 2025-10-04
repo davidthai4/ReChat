@@ -1,5 +1,5 @@
 config:
-  target: "http://localhost:8888"  # Replace with your backend port
+  target: "http://localhost:8888"
   phases:
     - duration: 60
       arrivalRate: 2  # 2 new users per second
@@ -7,7 +7,7 @@ config:
     socketio: {}
   processor: "./artillery-processor.js"  # Custom processor for file uploads
   variables:
-    # Test user credentials - you should create these test users in your database
+    # Test user credentials - create these test users in your database
     testUser1: "testuser1@example.com"
     testUser1Password: "testpassword123"
     testUser2: "testuser2@example.com"
