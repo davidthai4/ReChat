@@ -1,46 +1,93 @@
-import express from "express";
-import mongoose from "mongoose";
-import cookieParser from "cookie-parser";
-import dotenv from "dotenv";
-import cors from "cors";
-import authRoutes from "./routes/AuthRoutes.js";
-import contactRoutes from "./routes/ContactRoutes.js";
-import setupSocket from "./socket.js";
-import messagesRoutes from "./routes/MessagesRoutes.js";
-import channelRoutes from "./routes/ChannelRoutes.js";
+const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
 
-dotenv.config();
+// Import routes
+const authRoutes = require('./routes/auth');
+const messageRoutes = require('./routes/messages');
+const contactRoutes = require('./routes/contacts');
+const channelRoutes = require('./routes/channels');
+
+// Import socket handler
+const socketHandler = require('./socket/socketHandler');
 
 const app = express();
-const port = process.env.PORT || 8888;
-const databaseURL = process.env.DATABASE_URL;
-
-app.use(
-    cors({
-        origin: [process.env.ORIGIN],
-        methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-        credentials: true,
-    })
-);
-
-app.use("/uploads/profiles", express.static("uploads/profiles"));
-app.use("/uploads/files", express.static("uploads/files"));
-
-app.use(express.json());
-app.use(cookieParser());
-
-app.use("/api/auth", authRoutes);
-app.use("/api/contacts", contactRoutes);
-app.use("/api/messages", messagesRoutes);
-app.use("/api/channels", channelRoutes);
-
-const server = app.listen(port, () => {
-    console.log(`Server is running at http://localhost:${port}`);
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: process.env.ORIGIN || "http://localhost:3000",
+    methods: ["GET", "POST"]
+  }
 });
 
-setupSocket(server);
+const PORT = process.env.PORT || 8888;
 
-mongoose
-.connect(databaseURL)
-.then(() => console.log("Successfully Connected to MongoDB"))
-.catch(err=>console.log(err.message));
+// Middleware
+app.use(cors({
+  origin: process.env.ORIGIN || "http://localhost:3000",
+  credentials: true
+}));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serve static files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/contacts', contactRoutes);
+app.use('/api/channels', channelRoutes);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    services: {
+      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    }
+  });
+});
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+  socketHandler(io, socket);
+});
+
+// Connect to MongoDB
+mongoose.connect(process.env.DATABASE_URL, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => {
+  console.log('Connected to MongoDB');
+})
+.catch((error) => {
+  console.error('MongoDB connection error:', error);
+  process.exit(1);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  
+  // Close MongoDB connection
+  await mongoose.connection.close();
+  
+  // Close server
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+});

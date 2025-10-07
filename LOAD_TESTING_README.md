@@ -1,6 +1,5 @@
 # File Upload Load Testing with Artillery
 
-How to test your file upload functionality using Artillery.
 
 ## Prerequisites
 

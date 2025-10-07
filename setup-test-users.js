@@ -31,9 +31,9 @@ const createTestUsers = async () => {
                 color: 0
             });
             await testUser1.save();
-            console.log('✅ Created test user 1');
+            console.log('Created test user 1');
         } else {
-            console.log('✅ Test user 1 already exists');
+            console.log('Test user 1 already exists');
         }
 
         if (!existingUser2) {
@@ -46,16 +46,16 @@ const createTestUsers = async () => {
                 color: 1
             });
             await testUser2.save();
-            console.log('✅ Created test user 2');
+            console.log('Created test user 2');
         } else {
-            console.log('✅ Test user 2 already exists');
+            console.log('Test user 2 already exists');
         }
 
-        console.log('🎉 Test users setup complete!');
+        console.log('Test users setup complete!');
         console.log('You can now run the Artillery load test.');
         
     } catch (error) {
-        console.error('❌ Error setting up test users:', error);
+        console.error('Error setting up test users:', error);
         console.log('Make sure your server is running and MongoDB is connected');
     } finally {
         await mongoose.disconnect();
