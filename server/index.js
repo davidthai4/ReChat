@@ -3,6 +3,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const path = require('path');
 require('dotenv').config();
 
@@ -17,22 +18,32 @@ const socketHandler = require('./socket/socketHandler');
 
 const app = express();
 const server = http.createServer(app);
+
+const allowedOrigins = (process.env.ORIGIN || "http://localhost:3000")
+  .split(",")
+  .map(o => o.trim())
+  .concat(["http://localhost:5173"]);
+
 const io = socketIo(server, {
   cors: {
-    origin: process.env.ORIGIN || "http://localhost:3000",
-    methods: ["GET", "POST"]
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true,
   }
 });
 
 const PORT = process.env.PORT || 8888;
 
-// Middleware
 app.use(cors({
-  origin: process.env.ORIGIN || "http://localhost:3000",
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error("Not allowed by CORS"));
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

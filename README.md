@@ -456,6 +456,85 @@ docker-compose restart backend
 
 This containerized approach ensures that ReChat can be deployed reliably across any cloud environment while maintaining high availability, scalability, and maintainability.
 
+## Architecture Deep Dive
+
+### Real-Time Message Flow
+
+```
+Client A
+  │
+  ▼  socket.emit('sendMessage', { sender, recipient, content })
+Backend (Socket.IO)
+  │
+  ├─► Message.create() ──► MongoDB (persist immediately)
+  │        │
+  │        ▼
+  │   Message.findById().populate('sender').populate('recipient')
+  │
+  ├─► userSocketMap.get(recipientId) ──► io.to(socketId).emit('receiveMessage')  ──► Client B
+  └─► socket.emit('receiveMessage')  ──► Client A (sender UI update)
+```
+
+Each Socket.IO connection registers in a server-side `Map<userId, socketId>`. This gives O(1) recipient lookup — no broadcasting, no room fan-out for DMs. Channel messages use `io.to(channelId)` room broadcasting instead.
+
+Messages are written to MongoDB synchronously before delivery so there is no risk of a message being seen by the recipient but lost from the database. The populated sender/recipient user objects are what get emitted, so clients never need a second round-trip to resolve user details.
+
+### Read Receipts
+
+Read state is tracked two ways:
+- **Socket path**: when a message arrives in the active conversation, the client immediately emits `markMessageAsRead`. The server pushes the read user ID into the message's `readBy` array and emits `messageRead` back to the sender's socket.
+- **REST fallback**: `PATCH /api/messages/mark-as-read/:messageId` handles the same update for cases like page load, where the socket event may have been missed.
+
+The schema stores `readBy` as an array of `{ user, readAt }` subdocuments, which supports multi-reader receipts for channel messages without a separate collection.
+
+### Authentication
+
+JWT tokens are issued on login and stored in an HTTP-only cookie, which prevents JavaScript access and protects against XSS. The `verifyToken` middleware verifies the token on every protected route and attaches `req.userID` for downstream handlers. bcrypt with a generated salt handles password hashing in a `pre('save')` Mongoose hook so plaintext passwords never reach the controller layer.
+
+### State Management
+
+The frontend uses Zustand with two composed slices merged in a single `create()` call:
+
+- **Auth slice** — user session, profile setup status
+- **Chat slice** — selected conversation, message list, contacts, channels, upload/download progress, and read status (persisted to `localStorage`)
+
+Zustand was chosen over Redux to eliminate action/reducer/selector boilerplate. The store exposes setters and updaters directly, and `useAppStore.getState()` is used inside socket event handlers to avoid stale closure issues without re-registering listeners.
+
+### Infrastructure (Docker Compose)
+
+All seven services start with a single `docker-compose up --build`:
+
+| Service | Role |
+|---|---|
+| `mongodb` | Primary data store |
+| `zookeeper` | Kafka coordination |
+| `kafka` | Message broker (async processing layer) |
+| `backend` | Node.js API + Socket.IO server |
+| `kafka-consumer` | Standalone consumer service for async message processing |
+| `frontend` | React app served by Nginx |
+| `prometheus` / `grafana` | Metrics collection and dashboards |
+
+Every service defines a `healthcheck`, and `depends_on` uses `condition: service_healthy` — so the backend won't start until Kafka is actually accepting connections, and the frontend won't start until the backend passes its health check.
+
+### Performance
+
+Load tested with Artillery simulating 120+ concurrent users sending DMs, channel messages, and marking messages as read simultaneously:
+- **Average response latency**: < 1ms
+- **Test config**: [`socketio-test.yml`](socketio-test.yml)
+
+```bash
+artillery run socketio-test.yml
+```
+
+### Known Tradeoffs & Future Work
+
+| Area | Current State | Production Path |
+|---|---|---|
+| Socket.IO horizontal scaling | Single instance — room/user state is in-process memory | Add Redis adapter to share `userSocketMap` across replicas |
+| File storage | Local disk via Multer | Swap for S3/GCS with signed URLs |
+| Message history pagination | Full fetch sorted by timestamp | Cursor-based pagination for large histories |
+| Kafka consumer | Infra wired; consumer service subscribes to `chat-messages` topic | Connect consumer writes for async processing use cases (analytics, notifications) |
+
 ## Contributing
 
 1. Fork the repository

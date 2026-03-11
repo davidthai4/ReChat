@@ -1,12 +1,10 @@
-import Message from "../models/MessagesModel.js";
-import fs from "fs";
+const Message = require('../models/MessagesModel');
+const fs = require('fs');
 
-
-export const getMessages = async (req, res) => {
+const getMessages = async (req, res) => {
     try {
         const { recipientId } = req.params;
         const senderId = req.userID;
-
         const messages = await Message.find({
             $or: [
                 { sender: senderId, recipient: recipientId },
@@ -17,13 +15,9 @@ export const getMessages = async (req, res) => {
             .populate("recipient", "firstName lastName email image color")
             .sort({ timestamp: 1 });
 
-        // Migrate existing messages to have readBy field
         for (const message of messages) {
             if (!message.readBy) {
-                await Message.updateOne(
-                    { _id: message._id },
-                    { $set: { readBy: [] } }
-                );
+                await Message.updateOne({ _id: message._id }, { $set: { readBy: [] } });
                 message.readBy = [];
             }
         }
@@ -35,38 +29,21 @@ export const getMessages = async (req, res) => {
     }
 };
 
-export const markMessageAsRead = async (req, res) => {
+const markMessageAsRead = async (req, res) => {
     try {
         const { messageId } = req.params;
         const userId = req.userID;
-
         const message = await Message.findById(messageId);
-        if (!message) {
-            return res.status(404).json({ error: "Message not found" });
-        }
+        if (!message) return res.status(404).json({ error: "Message not found" });
 
-        // Initialize readBy array if it doesn't exist
-        if (!message.readBy) {
-            message.readBy = [];
-        }
-
-        // Check if user already marked this message as read
+        if (!message.readBy) message.readBy = [];
         const alreadyRead = message.readBy.some(read => read.user.toString() === userId);
         if (!alreadyRead) {
-            // Use updateOne to avoid triggering full validation
             await Message.updateOne(
                 { _id: messageId },
-                { 
-                    $push: { 
-                        readBy: {
-                            user: userId,
-                            readAt: new Date(),
-                        }
-                    }
-                }
+                { $push: { readBy: { user: userId, readAt: new Date() } } }
             );
         }
-
         res.json({ success: true });
     } catch (error) {
         console.error("Error marking message as read:", error);
@@ -74,38 +51,21 @@ export const markMessageAsRead = async (req, res) => {
     }
 };
 
-export const markChannelMessageAsRead = async (req, res) => {
+const markChannelMessageAsRead = async (req, res) => {
     try {
         const { messageId } = req.params;
         const userId = req.userID;
-
         const message = await Message.findById(messageId);
-        if (!message) {
-            return res.status(404).json({ error: "Message not found" });
-        }
+        if (!message) return res.status(404).json({ error: "Message not found" });
 
-        // Initialize readBy array if it doesn't exist
-        if (!message.readBy) {
-            message.readBy = [];
-        }
-
-        // Check if user already marked this message as read
+        if (!message.readBy) message.readBy = [];
         const alreadyRead = message.readBy.some(read => read.user.toString() === userId);
         if (!alreadyRead) {
-            // Use updateOne to avoid triggering full validation
             await Message.updateOne(
                 { _id: messageId },
-                { 
-                    $push: { 
-                        readBy: {
-                            user: userId,
-                            readAt: new Date(),
-                        }
-                    }
-                }
+                { $push: { readBy: { user: userId, readAt: new Date() } } }
             );
         }
-
         res.json({ success: true });
     } catch (error) {
         console.error("Error marking channel message as read:", error);
@@ -113,23 +73,19 @@ export const markChannelMessageAsRead = async (req, res) => {
     }
 };
 
-export const uploadFile = async (request, response, next) => {
-    console.log("uploadFile route hit");
+const uploadFile = async (request, response) => {
     try {
-        if (!request.file) {
-            return response.status(400).send("No file uploaded.");
-        }
+        if (!request.file) return response.status(400).send("No file uploaded.");
         const date = Date.now();
-        let fileDir = `uploads/files/${date}`;
-        let fileName = `${fileDir}/${request.file.originalname}`;
-
+        const fileDir = `uploads/files/${date}`;
+        const fileName = `${fileDir}/${request.file.originalname}`;
         fs.mkdirSync(fileDir, { recursive: true });
-
         fs.renameSync(request.file.path, fileName);
-        
         return response.status(200).json({ filePath: fileName });
     } catch (error) {
         console.log({ error });
         return response.status(500).send("Internal Server Error");
     }
 };
+
+module.exports = { getMessages, markMessageAsRead, markChannelMessageAsRead, uploadFile };

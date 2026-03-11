@@ -57,21 +57,22 @@ export const SocketProvider = ({ children }) => {
             };
 
             const handleReceiveChannelMessage = (message) => {
-                // console.log("=== RECEIVED CHANNEL MESSAGE DEBUG ===");
-                // console.log("Received channel message:", message);
+                console.log("=== RECEIVED CHANNEL MESSAGE DEBUG ===");
+                console.log("Received channel message:", message);
                 const { selectedChatType, selectedChatData, addMessage, updateChannelLastMessage, markConversationAsRead } = useAppStore.getState();
-                // console.log("Selected chat type:", selectedChatType);
-                // console.log("Selected chat data:", selectedChatData);
-                // console.log("Message channel ID:", message.channelId);
-                // console.log("Selected chat data ID:", selectedChatData?._id);
-                // console.log("Are IDs equal?", selectedChatData?._id === message.channelId);
+                console.log("Selected chat type:", selectedChatType);
+                console.log("Selected chat data:", selectedChatData);
+                console.log("Message channel ID:", message.channelId);
+                console.log("Selected chat data ID:", selectedChatData?._id);
+                console.log("Are IDs equal?", selectedChatData?._id === message.channelId);
 
                 if (
                     selectedChatType === "channel" &&
                     selectedChatData?._id === message.channelId
                 ) {
-                    // console.log("Adding channel message to chat");
+                    console.log("Adding channel message to chat");
                     addMessage(message);
+                    console.log("addMessage called, new count:", useAppStore.getState().selectedChatMessages.length);
                     // Mark as read if it's the current conversation
                     markConversationAsRead(message.channelId);
                     

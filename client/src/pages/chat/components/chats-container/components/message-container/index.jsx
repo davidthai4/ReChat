@@ -8,10 +8,12 @@ import { IoMdArrowRoundDown } from "react-icons/io";
 import { IoCloseSharp } from "react-icons/io5";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { getColor } from "@/lib/utils";
+import { useSocket } from "@/context/SocketContext";
 
 
 const MessageContainer = () => {
     const scrollRef = useRef(null);
+    const socket = useSocket();
     const { selectedChatType, selectedChatData, userInfo, selectedChatMessages, setSelectedChatMessages, setIsDownloading, setFileDownloadProgress } = useAppStore();
     const [showImage, setShowImage] = useState(false);
     const [imageUrl, setImageUrl] = useState(null);
@@ -21,7 +23,7 @@ const MessageContainer = () => {
     useEffect(() => {
         const getMessages = async () => {
             try {
-                const response = await apiClient.get(`/api/messages/${selectedChatData._id}`, 
+                const response = await apiClient.get(`/api/messages/get-messages/${selectedChatData._id}`,
                     { withCredentials: true }
                 );
                 if (response.data) {
@@ -43,8 +45,6 @@ const MessageContainer = () => {
                 }
             } catch (error) {
                 console.log("Error loading channel messages:", error);
-                // If the endpoint doesn't exist, we'll just use empty messages for now
-                setSelectedChatMessages([]);
             }
         };
 
@@ -53,9 +53,10 @@ const MessageContainer = () => {
                 getMessages();
             } else if (selectedChatType === "channel") {
                 getChannelMessages();
+                if (socket) socket.emit("joinChannel", selectedChatData._id);
             }
         }
-    }, [selectedChatData, selectedChatType, setSelectedChatMessages]);
+    }, [selectedChatData, selectedChatType, setSelectedChatMessages, socket]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -80,23 +81,21 @@ const MessageContainer = () => {
                 return isFromOthers && !alreadyRead;
             });
 
-            // Mark unread messages as read
-            unreadMessages.forEach(async (message) => {
-                try {
+            // Mark unread messages as read via socket
+            if (socket) {
+                unreadMessages.forEach((message) => {
                     if (selectedChatType === "contact") {
-                        await apiClient.post(`/api/messages/${message._id}/read`, {}, { withCredentials: true });
+                        socket.emit("markMessageAsRead", { messageId: message._id, userId: userInfo.id });
                     } else {
-                        await apiClient.post(`/api/messages/channel/${message._id}/read`, {}, { withCredentials: true });
+                        socket.emit("markChannelMessageAsRead", { messageId: message._id, userId: userInfo.id });
                     }
-                } catch (error) {
-                    // Silently handle errors - don't block the UI
-                    console.log("Error marking message as read:", error.message);
-                }
-            });
+                });
+            }
         }
     }, [selectedChatMessages, selectedChatData, selectedChatType, userInfo.id]);
     
     const renderMessages = () => {
+        console.log("[renderMessages] count:", selectedChatMessages.length, "type:", selectedChatType);
         let lastDate = null;
         return selectedChatMessages.map((message, index) => {
             const messageDate = moment(message.createdAt).format("MMM D, YYYY");
@@ -206,6 +205,7 @@ const MessageContainer = () => {
     };
 
     const renderChannelMessages = (message) => {
+        console.log("[renderChannelMessages] message:", message, "userInfo.id:", userInfo.id);
         // Add defensive checks for message structure
         if (!message || !message.sender) {
             console.log("Invalid message structure:", message);

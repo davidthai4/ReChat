@@ -1,6 +1,5 @@
-import mongoose from "mongoose";
+const mongoose = require('mongoose');
 
-// Message Schema
 const messageSchema = new mongoose.Schema({
     sender: {
         type: mongoose.Schema.Types.ObjectId,
@@ -10,16 +9,12 @@ const messageSchema = new mongoose.Schema({
     recipient: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: function() {
-            return !this.channelId; // Required only if not a channel message
-        },
+        required: function() { return !this.channelId; },
     },
     channelId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Channel",
-        required: function() {
-            return !this.recipient; // Required only if not a direct message
-        },
+        required: function() { return !this.recipient; },
     },
     messageType: {
         type: String,
@@ -28,32 +23,22 @@ const messageSchema = new mongoose.Schema({
     },
     content: {
         type: String,
-        required: function() {
-            return this.messageType === "text";
-        },
+        required: function() { return this.messageType === "text"; },
     },
     fileUrl: {
         type: String,
-        required: function() {
-            return this.messageType === "file";
-        },
+        required: function() { return this.messageType === "file"; },
     },
     timestamp: {
         type: Date,
         default: Date.now,
     },
     readBy: [{
-        user: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-        },
-        readAt: {
-            type: Date,
-            default: Date.now,
-        },
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        readAt: { type: Date, default: Date.now },
     }],
 });
 
 const Message = mongoose.model("Messages", messageSchema);
 
-export default Message;
+module.exports = Message;

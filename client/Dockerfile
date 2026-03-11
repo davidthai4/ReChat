@@ -5,11 +5,19 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Clear npm cache and node_modules to resolve esbuild/binary mismatch errors
+# This ensures we start with a clean slate before installing dependencies.
+RUN rm -rf node_modules && npm cache clean --force
+
+
 # Copy package files
 COPY package*.json ./
 
 # Install dependencies
 RUN npm install
+
+RUN npm uninstall esbuild && npm install esbuild
+RUN npm rebuild
 
 # Copy source code
 COPY . .

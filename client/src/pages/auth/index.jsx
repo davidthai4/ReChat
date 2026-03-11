@@ -1,4 +1,3 @@
-import Background from '@/assets/login2.png';
 import { Tabs, TabsList, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -54,7 +53,7 @@ const Auth = () => {
             { withCredentials: true }
           );
           if (response.data.user._id) {
-            setUserInfo({ ...response.data.user });
+            setUserInfo({ ...response.data.user, id: response.data.user._id });
             if (response.data.user.profileSetup) navigate("/chat")
             else navigate("/profile");
           }
@@ -74,16 +73,23 @@ const Auth = () => {
 
     const handleSignup = async () => {
       if (validateSignup()) {
-        const response = await apiClient.post(
-          SIGNUP_ROUTE, 
-          { email, password },
-          { withCredentials: true }
-        );
-        if (response.status === 201) {
-          setUserInfo(response.data.user);
-          navigate("/profile");
+        try {
+          const response = await apiClient.post(
+            SIGNUP_ROUTE,
+            { email, password },
+            { withCredentials: true }
+          );
+          if (response.status === 201) {
+            setUserInfo({ ...response.data.user, id: response.data.user._id });
+            navigate("/profile");
+          }
+        } catch (error) {
+          if (error.response?.status === 409) {
+            toast.error("An account with this email already exists.");
+          } else {
+            toast.error("Signup failed. Please try again.");
+          }
         }
-        console.log({ response });
       }
     };
   
@@ -155,8 +161,52 @@ const Auth = () => {
             </Tabs>
           </div>       
         </div>
-        <div className="hidden xl:flex justify-center items-center p-8">
-          <img src={Background} alt="background login" className="max-h-full max-w-full object-contain" />
+        <div className="hidden xl:flex flex-col justify-center items-center rounded-r-3xl overflow-hidden relative bg-gradient-to-br from-purple-600 via-violet-700 to-indigo-800 p-10">
+          {/* Background orbs */}
+          <div className="absolute top-[-60px] right-[-60px] w-64 h-64 rounded-full bg-white opacity-5" />
+          <div className="absolute bottom-[-80px] left-[-40px] w-80 h-80 rounded-full bg-purple-300 opacity-10" />
+          <div className="absolute top-1/2 left-[-30px] w-40 h-40 rounded-full bg-indigo-300 opacity-10" />
+
+          {/* Chat bubbles illustration */}
+          <div className="relative z-10 flex flex-col items-center gap-8 w-full max-w-xs">
+            {/* Bubble 1 */}
+            <div className="self-start flex items-end gap-2 animate-[fadeSlideIn_0.6s_ease_both]">
+              <div className="w-8 h-8 rounded-full bg-white/20 flex-shrink-0" />
+              <div className="bg-white/15 backdrop-blur-sm text-white text-sm px-4 py-3 rounded-2xl rounded-bl-none shadow-lg max-w-[180px]">
+                Hey, great to have you here! 👋
+              </div>
+            </div>
+
+            {/* Bubble 2 */}
+            <div className="self-end flex items-end gap-2 animate-[fadeSlideIn_0.8s_ease_both]">
+              <div className="bg-white/25 backdrop-blur-sm text-white text-sm px-4 py-3 rounded-2xl rounded-br-none shadow-lg max-w-[180px]">
+                Connecting you with your team ✨
+              </div>
+            </div>
+
+            {/* Bubble 3 */}
+            <div className="self-start flex items-end gap-2 animate-[fadeSlideIn_1s_ease_both]">
+              <div className="w-8 h-8 rounded-full bg-white/20 flex-shrink-0" />
+              <div className="bg-white/15 backdrop-blur-sm text-white text-sm px-4 py-3 rounded-2xl rounded-bl-none shadow-lg max-w-[180px]">
+                Fast, real-time messaging ⚡
+              </div>
+            </div>
+
+            {/* Typing indicator */}
+            <div className="self-end flex items-end gap-2 animate-[fadeSlideIn_1.2s_ease_both]">
+              <div className="bg-white/20 backdrop-blur-sm px-4 py-3 rounded-2xl rounded-br-none shadow-lg flex gap-1 items-center">
+                <span className="w-2 h-2 rounded-full bg-white/80 animate-bounce [animation-delay:0ms]" />
+                <span className="w-2 h-2 rounded-full bg-white/80 animate-bounce [animation-delay:150ms]" />
+                <span className="w-2 h-2 rounded-full bg-white/80 animate-bounce [animation-delay:300ms]" />
+              </div>
+            </div>
+          </div>
+
+          {/* Tagline */}
+          <div className="relative z-10 mt-12 text-center animate-[fadeSlideIn_1.4s_ease_both]">
+            <p className="text-white/70 text-sm font-medium tracking-widest uppercase">Real-time messaging</p>
+            <p className="text-white text-2xl font-bold mt-1">Built for your team</p>
+          </div>
         </div>
       </div>
     </div>

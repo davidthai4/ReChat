@@ -1,12 +1,11 @@
-import mongoose from "mongoose";
-import {genSalt, hash} from "bcrypt";  // Password hashing functions
+const mongoose = require('mongoose');
+const { genSalt, hash } = require('bcrypt');
 
-// Define user schema - structure of user data in database
 const userSchema = new mongoose.Schema({
     email: {
         type: String,
-        required: [true, "Email is required"],  // Must provide email with custom error message
-        unique: true,                           // No duplicate emails allowed
+        required: [true, "Email is required"],
+        unique: true,
     },
     password: {
         type: String,
@@ -14,34 +13,32 @@ const userSchema = new mongoose.Schema({
     },
     firstName: {
         type: String,
-        required: false,                        // Optional field
+        required: false,
     },
     lastName: {
         type: String,
         required: false,
     },
     image: {
-        type: String,                          // URL or path to profile image
+        type: String,
         required: false,
     },
     color: {
-        type: Number,                          // Profile color theme (likely numeric color code)
+        type: Number,
         required: false,
     },
     profileSetup: {
         type: Boolean,
-        default: false,                        // Tracks if user completed profile setup
+        default: false,
     },
 });
 
-// Pre-save middleware - runs before saving user to database
 userSchema.pre("save", async function (next) {
-    const salt = await genSalt();                    // Generate salt for password hashing
-    this.password = await hash(this.password, salt); // Hash password with salt
-    next();                                          // Continue with save operation
+    const salt = await genSalt();
+    this.password = await hash(this.password, salt);
+    next();
 });
 
-// Create User model from schema
 const User = mongoose.model("User", userSchema);
 
-export default User;
+module.exports = User;
