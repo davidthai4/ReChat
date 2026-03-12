@@ -14,6 +14,7 @@ import { useSocket } from "@/context/SocketContext";
 const MessageContainer = () => {
     const scrollRef = useRef(null);
     const socket = useSocket();
+    const markedMessageIds = useRef(new Set());
     const { selectedChatType, selectedChatData, userInfo, selectedChatMessages, setSelectedChatMessages, setIsDownloading, setFileDownloadProgress } = useAppStore();
     const [showImage, setShowImage] = useState(false);
     const [imageUrl, setImageUrl] = useState(null);
@@ -64,35 +65,28 @@ const MessageContainer = () => {
         }
     }, [selectedChatMessages]);
 
+    // Reset marked set when switching chats
+    useEffect(() => {
+        markedMessageIds.current = new Set();
+    }, [selectedChatData]);
+
     // Mark messages as read when they come into view
     useEffect(() => {
-        if (selectedChatMessages.length > 0 && selectedChatData) {
-            const unreadMessages = selectedChatMessages.filter(message => {
-                // Only mark messages from others as read
-                const isFromOthers = selectedChatType === "contact" 
-                    ? message.sender !== selectedChatData._id
-                    : message.sender._id !== userInfo.id;
-                
-                // Check if already read
-                const alreadyRead = message.readBy && message.readBy.some(read => 
-                    read.user === userInfo.id || read.user._id === userInfo.id
-                );
-                
-                return isFromOthers && !alreadyRead;
-            });
+        if (!selectedChatMessages.length || !selectedChatData || !socket) return;
 
-            // Mark unread messages as read via socket
-            if (socket) {
-                unreadMessages.forEach((message) => {
-                    if (selectedChatType === "contact") {
-                        socket.emit("markMessageAsRead", { messageId: message._id, userId: userInfo.id });
-                    } else {
-                        socket.emit("markChannelMessageAsRead", { messageId: message._id, userId: userInfo.id });
-                    }
-                });
+        selectedChatMessages.forEach((message) => {
+            const senderId = message.sender?._id || message.sender;
+            const isFromOthers = senderId !== userInfo.id;
+            const alreadyRead = message.readBy?.some(r => r.user?.toString() === userInfo.id);
+            const alreadyMarked = markedMessageIds.current.has(message._id);
+
+            if (isFromOthers && !alreadyRead && !alreadyMarked) {
+                markedMessageIds.current.add(message._id);
+                const event = selectedChatType === "contact" ? "markMessageAsRead" : "markChannelMessageAsRead";
+                socket.emit(event, { messageId: message._id, userId: userInfo.id });
             }
-        }
-    }, [selectedChatMessages, selectedChatData, selectedChatType, userInfo.id]);
+        });
+    }, [selectedChatMessages, selectedChatData, selectedChatType, userInfo.id, socket]);
     
     const renderMessages = () => {
         console.log("[renderMessages] count:", selectedChatMessages.length, "type:", selectedChatType);
