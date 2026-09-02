@@ -89,4 +89,12 @@ results-fixed.json
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.db 
+Thumbs.db node_modules/
+.DS_Store
+.vite/
+server/uploads/*
+!server/uploads/.gitkeep
+test-files/
+results.json
+results-fixed.json
+.env
