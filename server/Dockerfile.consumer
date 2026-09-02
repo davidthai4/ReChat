@@ -1,0 +1,29 @@
+# Use the official Node.js 20 image as base
+FROM node:20-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package.json and package-lock.json (if available)
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install --only=production
+
+# Copy the consumer-specific files
+COPY consumer/ ./consumer/
+COPY models/ ./models/
+COPY utils/ ./utils/
+
+# Create uploads directory
+RUN mkdir -p uploads/files uploads/profiles
+
+# Expose port (for health checks)
+EXPOSE 8889
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node healthcheck-consumer.js || exit 1
+
+# Start the consumer service
+CMD ["node", "consumer/index.js"]

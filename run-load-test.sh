@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # File Upload Load Testing Script
-# This script sets up and runs Artillery load tests for file uploads
 
 echo "Starting File Upload Load Testing..."
 

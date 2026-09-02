@@ -1,0 +1,26 @@
+# Docker Compose Override for Development
+
+services:
+  backend:
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: mongodb://admin:password123@mongodb:27017/rechat?authSource=admin
+      JWT_SECRET: development-jwt-secret-key
+      ORIGIN: http://localhost:3000
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_TOPIC_MESSAGES: chat-messages
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    command: npm start
+
+  kafka-consumer:
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: mongodb://admin:password123@mongodb:27017/rechat?authSource=admin
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_TOPIC_MESSAGES: chat-messages
+      KAFKA_GROUP_ID: chat-consumer-group
+    volumes:
+      - ./server:/app
+      - /app/node_modules

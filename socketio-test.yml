@@ -7,7 +7,7 @@ config:
     socketio: {}
   processor: "./artillery-processor.js"  # Custom processor for file uploads
   variables:
-    # Test user credentials - create these test users in your database
+    # Test user credentials - create these test users in database
     testUser1: "testuser1@example.com"
     testUser1Password: "testpassword123"
     testUser2: "testuser2@example.com"
