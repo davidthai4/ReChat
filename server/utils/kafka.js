@@ -1,88 +1,80 @@
-const { Kafka } = require('kafkajs');
+const { Kafka, logLevel } = require('kafkajs');
 
-const kafka = new Kafka({
-  clientId: 'rechat-server',
-  brokers: [process.env.KAFKA_BROKERS || 'localhost:9092'],
-  retry: {
-    initialRetryTime: 100,
-    retries: 8
-  }
-});
+// Kafka is only used when a broker is configured. Docker sets KAFKA_BROKERS;
+// Render does not, so production keeps the direct MongoDB + Socket.IO path.
+const KAFKA_ENABLED = Boolean(process.env.KAFKA_BROKERS);
+const MESSAGES_TOPIC = process.env.KAFKA_TOPIC_MESSAGES || 'chat-messages';
 
-const producer = kafka.producer({
-  maxInFlightRequests: 1,
-  idempotent: true,
-  transactionTimeout: 30000,
-});
+const kafka = KAFKA_ENABLED
+  ? new Kafka({
+      clientId: 'rechat-server',
+      brokers: process.env.KAFKA_BROKERS.split(','),
+      logLevel: logLevel.WARN,
+      retry: { initialRetryTime: 100, retries: 8 },
+    })
+  : null;
 
-const admin = kafka.admin();
+// Idempotent producer: broker retries can't create duplicates or reorder records.
+const producer = KAFKA_ENABLED
+  ? kafka.producer({ idempotent: true, maxInFlightRequests: 1 })
+  : null;
 
-// Initialize admin client and create topic if it doesn't exist
-async function initializeKafka() {
-  try {
-    await admin.connect();
-    
-    // Create the messages topic if it doesn't exist
-    const topicName = process.env.KAFKA_TOPIC_MESSAGES || 'chat-messages';
-    
-    try {
-      await admin.createTopics({
-        topics: [{
-          topic: topicName,
-          numPartitions: 3,
-          replicationFactor: 1,
-          configEntries: [
-            {
-              name: 'cleanup.policy',
-              value: 'delete'
-            },
-            {
-              name: 'retention.ms',
-              value: '604800000' // 7 days
-            }
-          ]
-        }]
-      });
-      console.log(`Topic ${topicName} created or already exists`);
-    } catch (error) {
-      if (error.type === 'TOPIC_ALREADY_EXISTS') {
-        console.log(`Topic ${topicName} already exists`);
-      } else {
-        console.error('Error creating topic:', error);
-      }
-    }
-    
-    await admin.disconnect();
-  } catch (error) {
-    console.error('Error initializing Kafka:', error);
-  }
+// The key picks the partition, and Kafka only orders records within a partition,
+// so every message in a conversation shares one key. DM IDs are sorted so
+// A->B and B->A produce the same key.
+function conversationKey({ channelId, sender, recipient }) {
+  if (channelId) return `channel:${channelId}`;
+  return `dm:${[String(sender), String(recipient)].sort().join(':')}`;
 }
 
-// Send message to Kafka
-async function sendMessage(topic, message) {
+async function initKafka() {
+  if (!KAFKA_ENABLED) {
+    console.log('Kafka disabled (KAFKA_BROKERS not set); using direct message path');
+    return;
+  }
+
+  const admin = kafka.admin();
+  await admin.connect();
   try {
-    const result = await producer.send({
-      topic,
-      messages: [{
-        key: message.senderId || message.id,
-        value: JSON.stringify(message),
-        timestamp: Date.now().toString()
-      }]
+    await admin.createTopics({
+      topics: [{
+        topic: MESSAGES_TOPIC,
+        numPartitions: 3,
+        replicationFactor: 1,
+        configEntries: [
+          { name: 'cleanup.policy', value: 'delete' },
+          { name: 'retention.ms', value: '604800000' }, // 7 days
+        ],
+      }],
     });
-    
-    console.log(`Message sent to Kafka: ${result[0].topicName}[${result[0].partition}]`);
-    return result;
-  } catch (error) {
-    console.error('Error sending message to Kafka:', error);
-    throw error;
+  } finally {
+    await admin.disconnect();
   }
+
+  await producer.connect();
+  console.log(`Kafka producer connected; topic: ${MESSAGES_TOPIC}`);
 }
 
-// Initialize Kafka on startup
-initializeKafka();
+async function publishMessage(event) {
+  return producer.send({
+    topic: MESSAGES_TOPIC,
+    messages: [{
+      key: conversationKey(event.message),
+      value: JSON.stringify(event),
+    }],
+  });
+}
+
+async function disconnectKafka() {
+  if (KAFKA_ENABLED) await producer.disconnect();
+}
 
 module.exports = {
+  KAFKA_ENABLED,
+  MESSAGES_TOPIC,
   kafka,
-  producer,
-  sendMessage
+  conversationKey,
+  initKafka,
+  publishMessage,
+  disconnectKafka,
 };
