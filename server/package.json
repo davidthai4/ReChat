@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "jest"
+    "test": "jest",
+    "test:kafka": "node test/kafka/kafka-path.check.js"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -23,7 +24,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.1",
-    "jest": "^29.7.0"
+    "jest": "^29.7.0",
+    "socket.io-client": "^4.8.1"
   },
   "keywords": ["chat", "realtime", "socket.io", "mongodb"],
   "author": "ReChat Team",
