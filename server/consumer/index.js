@@ -1,120 +1,99 @@
-const { Kafka } = require('kafkajs');
-const mongoose = require('mongoose');
+// Persistence consumer: saves chat events from Kafka to MongoDB.
 require('dotenv').config();
+const http = require('http');
+const mongoose = require('mongoose');
+const { Kafka, logLevel } = require('kafkajs');
+const Message = require('../models/MessagesModel');
 
-// Import models
-// const Message = require('../models/Message');
-// const ChannelMessage = require('../models/ChannelMessage');
+const TOPIC = process.env.KAFKA_TOPIC_MESSAGES || 'chat-messages';
+const GROUP_ID = process.env.KAFKA_GROUP_ID || 'chat-persistence';
+const HEALTH_PORT = Number(process.env.CONSUMER_HEALTH_PORT || 8889);
 
 const kafka = new Kafka({
-  clientId: 'rechat-consumer',
-  brokers: [process.env.KAFKA_BROKERS || 'localhost:9092'],
-  retry: {
-    initialRetryTime: 100,
-    retries: 8
+  clientId: 'rechat-persistence-consumer',
+  brokers: (process.env.KAFKA_BROKERS || 'localhost:9092').split(','),
+  logLevel: logLevel.WARN,
+  retry: { initialRetryTime: 100, retries: 8 },
+});
+
+// One shared group: each event is saved by exactly one consumer instance.
+const consumer = kafka.consumer({ groupId: GROUP_ID });
+
+let kafkaReady = false;
+
+// $setOnInsert only writes when the _id is new, so a redelivered event
+// (Kafka is at-least-once) never creates a duplicate.
+async function persistEvent({ type, message }) {
+  if (type !== 'direct_message' && type !== 'channel_message') {
+    console.warn(`Skipping unknown event type: ${type}`);
+    return;
   }
-});
+  const { _id, ...fields } = message;
+  await Message.updateOne(
+    { _id },
+    { $setOnInsert: { ...fields, timestamp: new Date(fields.timestamp) } },
+    { upsert: true, runValidators: true }
+  );
+}
 
-const consumer = kafka.consumer({ 
-  groupId: process.env.KAFKA_GROUP_ID || 'chat-consumer-group' 
-});
+async function run() {
+  await mongoose.connect(process.env.DATABASE_URL);
+  console.log('Persistence consumer connected to MongoDB');
 
-// Connect to MongoDB
-mongoose.connect(process.env.DATABASE_URL, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => {
-  console.log('Consumer connected to MongoDB');
-})
-.catch((error) => {
-  console.error('MongoDB connection error:', error);
-  process.exit(1);
-});
+  await consumer.connect();
+  await consumer.subscribe({ topic: TOPIC, fromBeginning: true });
+  kafkaReady = true;
+  console.log(`Persistence consumer subscribed to ${TOPIC} (group ${GROUP_ID})`);
 
-async function runConsumer() {
+  await consumer.run({
+    // The offset is committed only after this resolves, so a failed save
+    // is redelivered instead of lost.
+    eachMessage: async ({ message }) => {
+      let event;
+      try {
+        event = JSON.parse(message.value.toString());
+      } catch (error) {
+        // A malformed record can never succeed; skip it rather than block the partition.
+        console.error('Skipping malformed Kafka record:', error.message);
+        return;
+      }
+      await persistEvent(event);
+    },
+  });
+}
+
+function startHealthServer() {
+  const server = http.createServer((req, res) => {
+    const healthy = kafkaReady && mongoose.connection.readyState === 1;
+    res.writeHead(healthy ? 200 : 503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: healthy ? 'healthy' : 'unhealthy' }));
+  });
+  server.listen(HEALTH_PORT);
+  return server;
+}
+
+let healthServer = null;
+
+async function shutdown(signal) {
+  console.log(`${signal} received, shutting down persistence consumer`);
   try {
-    await consumer.connect();
-    console.log('Kafka consumer connected');
-    
-    const topicName = process.env.KAFKA_TOPIC_MESSAGES || 'chat-messages';
-    await consumer.subscribe({ topic: topicName, fromBeginning: false });
-    console.log(`Subscribed to topic: ${topicName}`);
-    
-    await consumer.run({
-      eachMessage: async ({ topic, partition, message }) => {
-        try {
-          const messageData = JSON.parse(message.value.toString());
-          console.log(`Processing message from topic ${topic}:`, messageData);
-          
-          // Process the message based on its type
-          await processMessage(messageData);
-          
-        } catch (error) {
-          console.error('Error processing message:', error);
-          // Failed messages sent to dead letter queue
-        }
-      },
-    });
-    
-  } catch (error) {
-    console.error('Consumer error:', error);
+    await consumer.disconnect();
+    await mongoose.connection.close();
+  } finally {
+    if (healthServer) healthServer.close();
+    process.exit(0);
   }
 }
 
-async function processMessage(messageData) {
-  try {
-    // Save the message to MongoDB
-    
-    if (messageData.type === 'direct_message') {
-      // Save direct message to MongoDB
-      console.log('Saving direct message to MongoDB:', messageData);
-      // await Message.create(messageData);
-      
-    } else if (messageData.type === 'channel_message') {
-      // Save channel message to MongoDB
-      console.log('Saving channel message to MongoDB:', messageData);
-      // await ChannelMessage.create(messageData);
-    }
-    
-    console.log('Message processed successfully');
-    
-  } catch (error) {
-    console.error('Error saving message to MongoDB:', error);
-    throw error;
-  }
+// Start only when run directly, so tests can import persistEvent.
+if (require.main === module) {
+  healthServer = startHealthServer();
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  run().catch((error) => {
+    console.error('Persistence consumer failed to start:', error);
+    process.exit(1);
+  });
 }
 
-// Health check function
-async function healthCheck() {
-  try {
-    // Check MongoDB connection
-    if (mongoose.connection.readyState !== 1) {
-      throw new Error('MongoDB not connected');
-    }
-    
-    // Check Kafka consumer
-    // kafkajs doesn't provide a direct health check method
-    
-    return { status: 'healthy', timestamp: new Date().toISOString() };
-  } catch (error) {
-    return { status: 'unhealthy', error: error.message, timestamp: new Date().toISOString() };
-  }
-}
-
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down consumer gracefully');
-  
-  await consumer.disconnect();
-  await mongoose.connection.close();
-  
-  console.log('Consumer shut down');
-  process.exit(0);
-});
-
-// Start the consumer
-runConsumer().catch(console.error);
-
-// Export for health checks
-module.exports = { healthCheck };
+module.exports = { persistEvent };

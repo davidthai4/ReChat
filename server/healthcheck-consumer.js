@@ -1,20 +1,9 @@
-const { healthCheck } = require('./consumer');
+const http = require('http');
 
-async function checkHealth() {
-  try {
-    const result = await healthCheck();
-    
-    if (result.status === 'healthy') {
-      console.log('Consumer health check passed');
-      process.exit(0);
-    } else {
-      console.log('Consumer health check failed:', result.error);
-      process.exit(1);
-    }
-  } catch (error) {
-    console.log('Consumer health check error:', error.message);
-    process.exit(1);
-  }
-}
+const port = Number(process.env.CONSUMER_HEALTH_PORT || 8889);
 
-checkHealth();
+const req = http.get({ host: 'localhost', port, path: '/health', timeout: 3000 }, (res) => {
+  process.exit(res.statusCode === 200 ? 0 : 1);
+});
+req.on('timeout', () => { req.destroy(); process.exit(1); });
+req.on('error', () => process.exit(1));

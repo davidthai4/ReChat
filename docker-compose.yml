@@ -119,7 +119,7 @@ services:
       DATABASE_URL: mongodb://admin:password123@mongodb:27017/rechat?authSource=admin
       KAFKA_BROKERS: kafka:29092
       KAFKA_TOPIC_MESSAGES: chat-messages
-      KAFKA_GROUP_ID: chat-consumer-group
+      KAFKA_GROUP_ID: chat-persistence
     networks:
       - rechat-network
     healthcheck:
