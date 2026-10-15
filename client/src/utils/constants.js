@@ -1,4 +1,8 @@
-export const HOST = import.meta.env.VITE_SERVER_URL;
+// Socket.IO always connects to the backend directly; it doesn't use the cookie.
+export const SOCKET_HOST = import.meta.env.VITE_SERVER_URL;
+// REST and uploads: same origin on Vercel (see vercel.json), backend URL elsewhere.
+// eslint-disable-next-line no-undef
+export const HOST = __USE_API_PROXY__ ? "" : import.meta.env.VITE_SERVER_URL;
 
 export const AUTH_ROUTES = "/api/auth";
 export const SIGNUP_ROUTE = `${AUTH_ROUTES}/signup`;

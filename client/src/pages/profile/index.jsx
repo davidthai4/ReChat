@@ -65,7 +65,12 @@ const Profile = () => {
           navigate("/chat");
         }
       } catch (error) {
-        console.log(error);
+        console.error(error);
+        toast.error(
+          error.response?.status === 401
+            ? "Your session expired. Please log in again."
+            : "Couldn't save your profile. Please try again."
+        );
       }
     }
   };
@@ -88,10 +93,15 @@ const Profile = () => {
     if (file) {
       const formData = new FormData();
       formData.append("profile-image", file);
-      const response = await apiClient.post(ADD_PROFILE_IMAGE_ROUTE, formData, {withCredentials: true});
-      if (response.status === 200 && response.data.image) {
-        setUserInfo({ ...userInfo, image: response.data.image });
-        toast.success("Profile image updated successfully.");
+      try {
+        const response = await apiClient.post(ADD_PROFILE_IMAGE_ROUTE, formData, {withCredentials: true});
+        if (response.status === 200 && response.data.image) {
+          setUserInfo({ ...userInfo, image: response.data.image });
+          toast.success("Profile image updated successfully.");
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error("Couldn't upload the image. Please try again.");
       }
     }
   };
@@ -105,7 +115,8 @@ const Profile = () => {
         setImage(null);
       }
     } catch (error) {
-      console.log(error);
+      console.error(error);
+      toast.error("Couldn't remove the image. Please try again.");
     }
   };
 

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef } from "react";
 import { useAppStore } from "@/store";
 import { io } from "socket.io-client";
-import { HOST } from "@/utils/constants";
+import { SOCKET_HOST } from "@/utils/constants";
 
 
 const SocketContext = createContext(null);
@@ -16,7 +16,7 @@ export const SocketProvider = ({ children }) => {
 
     useEffect(() => {
         if (userInfo) {
-            socket.current = io(HOST, {
+            socket.current = io(SOCKET_HOST, {
                 withCredentials: true,
                 query: { userID: userInfo.id },
             });
