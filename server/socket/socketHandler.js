@@ -1,8 +1,19 @@
+const mongoose = require('mongoose');
 const Message = require('../models/MessagesModel');
-const User = require('../models/UserModel');
+const { userSocketMap } = require('./presence');
+const { KAFKA_ENABLED, publishMessage } = require('../utils/kafka');
 
-// Map of userId -> socketId for routing messages
-const userSocketMap = new Map();
+// The _id is assigned before publishing so the persistence consumer can upsert
+// by it (redelivery is harmless) and fan-out can send it to clients right away.
+async function publishChatEvent(type, fields) {
+    const message = {
+        _id: new mongoose.Types.ObjectId().toString(),
+        ...fields,
+        timestamp: new Date().toISOString(),
+        readBy: [],
+    };
+    await publishMessage({ type, message });
+}
 
 module.exports = (io, socket) => {
     const userId = socket.handshake.query.userID;
@@ -14,6 +25,11 @@ module.exports = (io, socket) => {
     socket.on('sendMessage', async (data) => {
         try {
             const { sender, recipient, messageType, content, fileUrl } = data;
+
+            if (KAFKA_ENABLED) {
+                await publishChatEvent('direct_message', { sender, recipient, messageType, content, fileUrl });
+                return;
+            }
 
             const newMessage = await Message.create({
                 sender,
@@ -46,7 +62,10 @@ module.exports = (io, socket) => {
     socket.on('sendChannelMessage', async (data) => {
         try {
             const { sender, channelId, messageType, content, fileUrl } = data;
-            console.log('[sendChannelMessage] received:', { sender, channelId, messageType, content });
+            if (KAFKA_ENABLED) {
+                await publishChatEvent('channel_message', { sender, channelId, messageType, content, fileUrl });
+                return;
+            }
 
             const newMessage = await Message.create({
                 sender,
