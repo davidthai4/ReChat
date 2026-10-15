@@ -15,6 +15,8 @@ const channelRoutes = require('./routes/channels');
 
 // Import socket handler
 const socketHandler = require('./socket/socketHandler');
+const { KAFKA_ENABLED, initKafka, disconnectKafka } = require('./utils/kafka');
+const { startFanout, stopFanout } = require('./socket/fanout');
 
 const app = express();
 const server = http.createServer(app);
@@ -76,8 +78,15 @@ mongoose.connect(process.env.DATABASE_URL, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => {
+.then(async () => {
   console.log('Connected to MongoDB');
+  try {
+    await initKafka();
+    if (KAFKA_ENABLED) await startFanout(io);
+  } catch (error) {
+    console.error('Kafka startup error:', error);
+    process.exit(1);
+  }
 })
 .catch((error) => {
   console.error('MongoDB connection error:', error);
@@ -88,7 +97,9 @@ mongoose.connect(process.env.DATABASE_URL, {
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully');
   
-  // Close MongoDB connection
+  // Stop Kafka clients, then close MongoDB connection
+  await stopFanout();
+  await disconnectKafka();
   await mongoose.connection.close();
   
   // Close server
